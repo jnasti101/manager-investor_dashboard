@@ -19,9 +19,9 @@ export function formatPercentage(value: number): string {
 }
 
 export function formatDate(date: Date): string {
-  return new Intl.DateFormat('en-US', {
+  return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
-  }).format(date)
+  })
 }
