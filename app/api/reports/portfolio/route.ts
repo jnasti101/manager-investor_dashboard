@@ -3,6 +3,20 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { Prisma } from '@prisma/client'
+
+// Define the property type with all includes
+type PropertyWithRelations = Prisma.AssetGetPayload<{
+  include: {
+    realEstateProperty: {
+      include: {
+        mortgages: true
+        expenses: true
+      }
+    }
+    incomeStreams: true
+  }
+}>
 
 export async function GET() {
   const session = await auth()
@@ -30,9 +44,9 @@ export async function GET() {
     })
 
     // Calculate portfolio metrics
-    const totalValue = properties.reduce((sum: number, p) => sum + Number(p.currentValue), 0)
-    const totalCostBasis = properties.reduce((sum: number, p) => sum + Number(p.costBasis), 0)
-    const totalDebt = properties.reduce((sum: number, p) => {
+    const totalValue = properties.reduce((sum: number, p: PropertyWithRelations) => sum + Number(p.currentValue), 0)
+    const totalCostBasis = properties.reduce((sum: number, p: PropertyWithRelations) => sum + Number(p.costBasis), 0)
+    const totalDebt = properties.reduce((sum: number, p: PropertyWithRelations) => {
       const mortgageDebt = p.realEstateProperty?.mortgages.reduce(
         (mSum: number, m) => mSum + Number(m.currentBalance),
         0
@@ -44,7 +58,7 @@ export async function GET() {
     const appreciationPercent = totalCostBasis > 0 ? (totalAppreciation / totalCostBasis) * 100 : 0
 
     // Calculate monthly cash flow
-    const monthlyIncome = properties.reduce((sum: number, p) => {
+    const monthlyIncome = properties.reduce((sum: number, p: PropertyWithRelations) => {
       const propertyIncome = p.incomeStreams.reduce((iSum: number, income) => {
         const today = new Date()
         const incomeStart = new Date(income.startDate)
@@ -62,7 +76,7 @@ export async function GET() {
       return sum + propertyIncome
     }, 0)
 
-    const monthlyExpenses = properties.reduce((sum: number, p) => {
+    const monthlyExpenses = properties.reduce((sum: number, p: PropertyWithRelations) => {
       const propertyExpenses = p.realEstateProperty?.expenses.reduce((eSum: number, expense) => {
         const today = new Date()
         const expenseDate = new Date(expense.date)
@@ -74,7 +88,7 @@ export async function GET() {
       return sum + propertyExpenses
     }, 0)
 
-    const monthlyMortgagePayments = properties.reduce((sum: number, p) => {
+    const monthlyMortgagePayments = properties.reduce((sum: number, p: PropertyWithRelations) => {
       const propertyPayments = p.realEstateProperty?.mortgages.reduce(
         (mSum: number, m) => mSum + Number(m.monthlyPayment),
         0
@@ -141,7 +155,7 @@ export async function GET() {
     const finalY = (doc as any).lastAutoTable.finalY || 50
     doc.text('Property Details', 14, finalY + 15)
 
-    const propertyRows = properties.map((property) => {
+    const propertyRows = properties.map((property: PropertyWithRelations) => {
       const reProperty = property.realEstateProperty
       const mortgageDebt = reProperty?.mortgages.reduce(
         (sum: number, m) => sum + Number(m.currentBalance),
@@ -189,7 +203,7 @@ export async function GET() {
 
     let currentY = 30
 
-    properties.forEach((property, index) => {
+    properties.forEach((property: PropertyWithRelations, index: number) => {
       const reProperty = property.realEstateProperty
 
       if (currentY > 250) {
