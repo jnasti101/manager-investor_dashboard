@@ -3,20 +3,6 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { Prisma } from '@prisma/client'
-
-// Define the property type with all includes
-type PropertyWithRelations = Prisma.AssetGetPayload<{
-  include: {
-    realEstateProperty: {
-      include: {
-        mortgages: true
-        expenses: true
-      }
-    }
-    incomeStreams: true
-  }
-}>
 
 export async function GET() {
   const session = await auth()
@@ -42,6 +28,9 @@ export async function GET() {
       },
       orderBy: { createdAt: 'desc' },
     })
+
+    // Infer the type from the actual query result
+    type PropertyWithRelations = typeof properties[0]
 
     // Calculate portfolio metrics
     const totalValue = properties.reduce((sum: number, p: PropertyWithRelations) => sum + Number(p.currentValue), 0)
