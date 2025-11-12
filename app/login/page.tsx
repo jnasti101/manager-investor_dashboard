@@ -7,26 +7,40 @@ import { Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { signIn } from 'next-auth/react'
 
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
     setLoading(true)
 
-    // TODO: Implement actual authentication
-    // For now, mock authentication based on email
-    setTimeout(() => {
-      if (email.includes('manager')) {
-        router.push('/dashboard/manager')
+    try {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError('Invalid email or password')
       } else {
+        // Successfully logged in, redirect based on role
+        // For now, redirect to investor dashboard (we'll add role-based routing later)
         router.push('/dashboard/investor')
+        router.refresh()
       }
-    }, 1000)
+    } catch (err) {
+      setError('An error occurred. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -41,6 +55,11 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="rounded-md bg-red-50 p-4">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            )}
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium text-gray-900">
                 Email
@@ -65,6 +84,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={8}
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
@@ -78,9 +98,8 @@ export default function LoginPage() {
             </Link>
           </div>
           <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm text-gray-700">
-            <p className="font-semibold mb-1 text-gray-900">Demo accounts:</p>
-            <p>Manager: manager@example.com</p>
-            <p>Investor: investor@example.com</p>
+            <p className="font-semibold mb-1 text-gray-900">Create an account to get started!</p>
+            <p>Click &quot;Sign up&quot; above to register.</p>
           </div>
         </CardContent>
       </Card>

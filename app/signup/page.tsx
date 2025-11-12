@@ -13,21 +13,35 @@ export default function SignupPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<'investor' | 'manager'>('investor')
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
     setLoading(true)
 
-    // TODO: Implement actual authentication
-    setTimeout(() => {
-      if (role === 'manager') {
-        router.push('/dashboard/manager')
-      } else {
-        router.push('/dashboard/investor')
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error || 'Registration failed')
+        return
       }
-    }, 1000)
+
+      // Registration successful, redirect to login
+      router.push('/login?registered=true')
+    } catch (err) {
+      setError('An error occurred. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -37,11 +51,16 @@ export default function SignupPage() {
           <Building2 className="h-12 w-12 text-indigo-600 mb-2" />
           <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
           <CardDescription>
-            Get started with your real estate portfolio
+            Get started with your wealth management platform
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="rounded-md bg-red-50 p-4">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            )}
             <div className="space-y-2">
               <label htmlFor="name" className="text-sm font-medium text-gray-900">
                 Full Name
@@ -53,6 +72,7 @@ export default function SignupPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                minLength={2}
               />
             </div>
             <div className="space-y-2">
@@ -75,38 +95,13 @@ export default function SignupPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Create a password"
+                placeholder="At least 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={8}
               />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Account Type</label>
-              <div className="flex gap-4">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="role"
-                    value="investor"
-                    checked={role === 'investor'}
-                    onChange={(e) => setRole(e.target.value as 'investor')}
-                    className="text-indigo-600"
-                  />
-                  <span className="text-gray-900">Investor</span>
-                </label>
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="role"
-                    value="manager"
-                    checked={role === 'manager'}
-                    onChange={(e) => setRole(e.target.value as 'manager')}
-                    className="text-indigo-600"
-                  />
-                  <span className="text-gray-900">Manager</span>
-                </label>
-              </div>
+              <p className="text-xs text-gray-600">Must be at least 8 characters</p>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Creating account...' : 'Sign Up'}

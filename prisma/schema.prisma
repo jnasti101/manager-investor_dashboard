@@ -1,0 +1,650 @@
+// Prisma schema for AI-Powered Wealth Management Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// User Management & Authentication
+// ============================================================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  role          Role      @default(CLIENT)
+  passwordHash  String
+  mfaEnabled    Boolean   @default(false)
+  mfaSecret     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  assets        Asset[]
+  liabilities   Liability[]
+  goals         Goal[]
+  incomeStreams IncomeStream[]
+  expenses      Expense[]
+  recommendations Recommendation[]
+
+  // For advisors
+  clients       ClientRelationship[] @relation("AdvisorClients")
+
+  // For clients with advisors
+  advisors      ClientRelationship[] @relation("ClientAdvisors")
+
+  @@index([email])
+}
+
+enum Role {
+  CLIENT
+  ADVISOR
+  ADMIN
+}
+
+model ClientRelationship {
+  id          String   @id @default(uuid())
+  advisorId   String
+  clientId    String
+  status      ClientStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+
+  advisor     User     @relation("AdvisorClients", fields: [advisorId], references: [id], onDelete: Cascade)
+  client      User     @relation("ClientAdvisors", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([advisorId, clientId])
+  @@index([advisorId])
+  @@index([clientId])
+}
+
+enum ClientStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+}
+
+// ============================================================================
+// Asset Management
+// ============================================================================
+
+model AssetCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  icon        String?
+
+  assets      Asset[]
+}
+
+model Asset {
+  id              String    @id @default(uuid())
+  userId          String
+  categoryId      String?
+  assetType       String    // "real_estate", "stock", "bond", etc.
+  name            String
+  currentValue    Decimal   @db.Decimal(15, 2)
+  costBasis       Decimal?  @db.Decimal(15, 2)
+  acquisitionDate DateTime?
+  metadata        Json      @default("{}")
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category        AssetCategory? @relation(fields: [categoryId], references: [id])
+
+  valuations      AssetValuation[]
+  incomeStreams   IncomeStream[]
+  realEstateProperty RealEstateProperty?
+  security        Security?
+  cryptoHolding   CryptoHolding?
+  businessInterest BusinessInterest?
+
+  @@index([userId])
+  @@index([assetType])
+}
+
+model AssetValuation {
+  id        String   @id @default(uuid())
+  assetId   String
+  value     Decimal  @db.Decimal(15, 2)
+  date      DateTime @default(now())
+  source    String?  // "manual", "plaid", "zillow", "api"
+
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([date])
+}
+
+// ============================================================================
+// Real Estate Properties
+// ============================================================================
+
+model RealEstateProperty {
+  id              String    @id @default(uuid())
+  assetId         String    @unique
+  address         String
+  city            String
+  state           String
+  zipCode         String
+  propertyType    PropertyType
+  bedrooms        Int?
+  bathrooms       Decimal?  @db.Decimal(3, 1)
+  squareFeet      Int?
+  yearBuilt       Int?
+  purchasePrice   Decimal   @db.Decimal(15, 2)
+  purchaseDate    DateTime
+  currentValue    Decimal   @db.Decimal(15, 2)
+
+  asset           Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  images          PropertyImage[]
+  documents       PropertyDocument[]
+  expenses        PropertyExpense[]
+  mortgages       PropertyMortgage[]
+
+  @@index([assetId])
+}
+
+enum PropertyType {
+  SINGLE_FAMILY
+  MULTI_FAMILY
+  CONDO
+  TOWNHOUSE
+  COMMERCIAL
+  LAND
+  OTHER
+}
+
+model PropertyImage {
+  id         String   @id @default(uuid())
+  propertyId String
+  url        String
+  caption    String?
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  property   RealEstateProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+model PropertyDocument {
+  id         String   @id @default(uuid())
+  propertyId String
+  name       String
+  type       DocumentType
+  url        String
+  uploadedAt DateTime @default(now())
+
+  property   RealEstateProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+enum DocumentType {
+  DEED
+  LEASE
+  INSURANCE
+  TAX_RECORD
+  INSPECTION
+  APPRAISAL
+  OTHER
+}
+
+model PropertyExpense {
+  id          String    @id @default(uuid())
+  propertyId  String
+  category    ExpenseCategory
+  amount      Decimal   @db.Decimal(10, 2)
+  date        DateTime
+  description String?
+  recurring   Boolean   @default(false)
+
+  property    RealEstateProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([date])
+}
+
+enum ExpenseCategory {
+  MORTGAGE
+  PROPERTY_TAX
+  INSURANCE
+  HOA
+  MAINTENANCE
+  UTILITIES
+  MANAGEMENT
+  OTHER
+}
+
+model PropertyMortgage {
+  id                String    @id @default(uuid())
+  propertyId        String
+  lender            String
+  loanType          String    // "conventional", "FHA", "VA", "fixed", "ARM", etc.
+  originalAmount    Decimal   @db.Decimal(15, 2)
+  currentBalance    Decimal   @db.Decimal(15, 2)
+  interestRate      Decimal   @db.Decimal(5, 3)  // Store as percentage, e.g., 4.5 = 4.500%
+  termMonths        Int       // Total loan term in months (e.g., 360 for 30-year)
+  startDate         DateTime
+  monthlyPayment    Decimal   @db.Decimal(10, 2)
+  property          RealEstateProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([propertyId])
+}
+
+// ============================================================================
+// Securities & Investment Accounts
+// ============================================================================
+
+model InvestmentAccount {
+  id            String   @id @default(uuid())
+  userId        String
+  accountType   AccountType
+  accountName   String
+  institution   String?
+  accountNumber String?
+  taxTreatment  TaxTreatment
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  securities    Security[]
+
+  @@index([userId])
+}
+
+enum AccountType {
+  BROKERAGE
+  IRA_TRADITIONAL
+  IRA_ROTH
+  FOUR_O_ONE_K
+  FOUR_O_THREE_B
+  FIVE_TWENTY_NINE
+  HSA
+  OTHER
+}
+
+enum TaxTreatment {
+  TAXABLE
+  TAX_DEFERRED
+  TAX_FREE
+}
+
+model Security {
+  id              String    @id @default(uuid())
+  assetId         String    @unique
+  accountId       String
+  securityType    SecurityType
+  ticker          String?
+  quantity        Decimal   @db.Decimal(18, 8)
+  costBasis       Decimal   @db.Decimal(15, 2)
+  currentPrice    Decimal?  @db.Decimal(15, 4)
+  lastPriceUpdate DateTime?
+
+  asset           Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  account         InvestmentAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactions    SecurityTransaction[]
+
+  @@index([assetId])
+  @@index([accountId])
+  @@index([ticker])
+}
+
+enum SecurityType {
+  STOCK
+  BOND
+  ETF
+  MUTUAL_FUND
+  OPTION
+  FUTURE
+  COMMODITY
+  OTHER
+}
+
+model SecurityTransaction {
+  id            String   @id @default(uuid())
+  securityId    String
+  transactionType TransactionType
+  quantity      Decimal  @db.Decimal(18, 8)
+  price         Decimal  @db.Decimal(15, 4)
+  date          DateTime
+  fees          Decimal? @db.Decimal(10, 2)
+  notes         String?
+
+  security      Security @relation(fields: [securityId], references: [id], onDelete: Cascade)
+
+  @@index([securityId])
+  @@index([date])
+}
+
+enum TransactionType {
+  BUY
+  SELL
+  DIVIDEND
+  SPLIT
+  TRANSFER_IN
+  TRANSFER_OUT
+}
+
+// ============================================================================
+// Cryptocurrency
+// ============================================================================
+
+model CryptoHolding {
+  id              String    @id @default(uuid())
+  assetId         String    @unique
+  coinId          String    // CoinGecko ID
+  symbol          String
+  quantity        Decimal   @db.Decimal(18, 8)
+  costBasis       Decimal   @db.Decimal(15, 2)
+  walletAddress   String?
+  walletType      WalletType
+  currentPrice    Decimal?  @db.Decimal(15, 4)
+  lastPriceUpdate DateTime?
+
+  asset           Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  transactions    CryptoTransaction[]
+
+  @@index([assetId])
+  @@index([coinId])
+}
+
+enum WalletType {
+  HOT_WALLET
+  COLD_WALLET
+  EXCHANGE
+  CUSTODIAL
+}
+
+model CryptoTransaction {
+  id              String   @id @default(uuid())
+  cryptoHoldingId String
+  transactionType CryptoTransactionType
+  quantity        Decimal  @db.Decimal(18, 8)
+  price           Decimal  @db.Decimal(15, 4)
+  date            DateTime
+  fees            Decimal? @db.Decimal(10, 2)
+  notes           String?
+
+  cryptoHolding   CryptoHolding @relation(fields: [cryptoHoldingId], references: [id], onDelete: Cascade)
+
+  @@index([cryptoHoldingId])
+  @@index([date])
+}
+
+enum CryptoTransactionType {
+  BUY
+  SELL
+  TRANSFER_IN
+  TRANSFER_OUT
+  STAKE
+  UNSTAKE
+  REWARD
+}
+
+// ============================================================================
+// Business Interests
+// ============================================================================
+
+model BusinessInterest {
+  id              String    @id @default(uuid())
+  assetId         String    @unique
+  businessName    String
+  ownershipPercent Decimal  @db.Decimal(5, 2)
+  businessType    BusinessType
+  valuation       Decimal   @db.Decimal(15, 2)
+  valuationDate   DateTime
+
+  asset           Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  distributions   BusinessDistribution[]
+
+  @@index([assetId])
+}
+
+enum BusinessType {
+  SOLE_PROPRIETORSHIP
+  PARTNERSHIP
+  LLC
+  S_CORP
+  C_CORP
+  OTHER
+}
+
+model BusinessDistribution {
+  id              String   @id @default(uuid())
+  businessId      String
+  amount          Decimal  @db.Decimal(10, 2)
+  date            DateTime
+  distributionType String  // "dividend", "draw", "distribution"
+
+  business        BusinessInterest @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([date])
+}
+
+// ============================================================================
+// Liabilities & Debt
+// ============================================================================
+
+model Liability {
+  id              String    @id @default(uuid())
+  userId          String
+  liabilityType   String    // "mortgage", "student_loan", "credit_card", etc.
+  name            String
+  currentBalance  Decimal   @db.Decimal(15, 2)
+  originalAmount  Decimal?  @db.Decimal(15, 2)
+  interestRate    Decimal?  @db.Decimal(5, 2)
+  minimumPayment  Decimal?  @db.Decimal(10, 2)
+  dueDate         DateTime?
+  metadata        Json      @default("{}")
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  payments        LiabilityPayment[]
+
+  @@index([userId])
+}
+
+model LiabilityPayment {
+  id            String    @id @default(uuid())
+  liabilityId   String
+  amount        Decimal   @db.Decimal(10, 2)
+  paymentDate   DateTime
+  principalPaid Decimal?  @db.Decimal(10, 2)
+  interestPaid  Decimal?  @db.Decimal(10, 2)
+
+  liability     Liability @relation(fields: [liabilityId], references: [id], onDelete: Cascade)
+
+  @@index([liabilityId])
+  @@index([paymentDate])
+}
+
+// ============================================================================
+// Financial Goals
+// ============================================================================
+
+model Goal {
+  id            String    @id @default(uuid())
+  userId        String
+  goalType      String    // "retirement", "education", "purchase", etc.
+  name          String
+  targetAmount  Decimal?  @db.Decimal(15, 2)
+  currentAmount Decimal   @db.Decimal(15, 2) @default(0)
+  targetDate    DateTime?
+  priority      Int       @default(0)
+  status        GoalStatus @default(PLANNING)
+  metadata      Json      @default("{}")
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  milestones    GoalMilestone[]
+
+  @@index([userId])
+  @@index([goalType])
+}
+
+enum GoalStatus {
+  PLANNING
+  IN_PROGRESS
+  ON_TRACK
+  AT_RISK
+  ACHIEVED
+  ABANDONED
+}
+
+model GoalMilestone {
+  id          String    @id @default(uuid())
+  goalId      String
+  name        String
+  targetDate  DateTime
+  targetValue Decimal?  @db.Decimal(15, 2)
+  achieved    Boolean   @default(false)
+  achievedAt  DateTime?
+
+  goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+}
+
+// ============================================================================
+// Income & Expenses
+// ============================================================================
+
+model IncomeStream {
+  id          String    @id @default(uuid())
+  userId      String
+  assetId     String?
+  incomeType  String    // "salary", "rental", "dividend", etc.
+  name        String
+  amount      Decimal   @db.Decimal(10, 2)
+  frequency   Frequency
+  startDate   DateTime
+  endDate     DateTime?
+  isRecurring Boolean   @default(true)
+  metadata    Json      @default("{}")
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset       Asset?    @relation(fields: [assetId], references: [id])
+
+  @@index([userId])
+  @@index([incomeType])
+}
+
+enum Frequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+  ONE_TIME
+}
+
+model Expense {
+  id          String    @id @default(uuid())
+  userId      String
+  category    String
+  subcategory String?
+  amount      Decimal   @db.Decimal(10, 2)
+  date        DateTime
+  description String?
+  isRecurring Boolean   @default(false)
+  frequency   Frequency?
+  metadata    Json      @default("{}")
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+  @@index([date])
+}
+
+// ============================================================================
+// Recommendations
+// ============================================================================
+
+model Recommendation {
+  id            String    @id @default(uuid())
+  userId        String
+  type          String    // "portfolio", "tax", "goal", "cash_flow"
+  title         String
+  description   String
+  priority      Priority
+  status        RecommendationStatus @default(PENDING)
+  source        RecommendationSource @default(AI)
+  createdById   String?
+  actionItems   Json      @default("[]")
+  metadata      Json      @default("{}")
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  dismissedAt   DateTime?
+  implementedAt DateTime?
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RecommendationStatus {
+  PENDING
+  DISMISSED
+  IN_PROGRESS
+  IMPLEMENTED
+}
+
+enum RecommendationSource {
+  AI
+  ADVISOR
+  SYSTEM
+}
+
+// ============================================================================
+// Audit & Security
+// ============================================================================
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  resource  String
+  resourceId String?
+  metadata  Json     @default("{}")
+  ipAddress String?
+  userAgent String?
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([resource, resourceId])
+}
