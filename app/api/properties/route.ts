@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 
 const propertySchema = z.object({
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
     const body = await req.json()
     const validated = propertySchema.parse(body)
 
-    const property = await prisma.$transaction(async (tx) => {
+    const property = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Create asset
       const asset = await tx.asset.create({
         data: {
