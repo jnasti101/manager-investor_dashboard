@@ -4,10 +4,9 @@
   "description": "Real estate portfolio management platform for investors and property managers",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate --no-engine && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint",
-    "postinstall": "prisma generate --no-engine"
+    "lint": "next lint"
   },
   "keywords": [],
   "author": "",
