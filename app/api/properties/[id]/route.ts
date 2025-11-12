@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 
 // GET single property
 export async function GET(
@@ -76,7 +77,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Property not found' }, { status: 404 })
     }
 
-    const property = await prisma.$transaction(async (tx) => {
+    const property = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Update asset
       await tx.asset.update({
         where: { id: id },
