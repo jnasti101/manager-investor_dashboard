@@ -30,11 +30,11 @@ export async function GET() {
     })
 
     // Calculate portfolio metrics
-    const totalValue = properties.reduce((sum, p) => sum + Number(p.currentValue), 0)
-    const totalCostBasis = properties.reduce((sum, p) => sum + Number(p.costBasis), 0)
-    const totalDebt = properties.reduce((sum, p) => {
+    const totalValue = properties.reduce((sum: number, p) => sum + Number(p.currentValue), 0)
+    const totalCostBasis = properties.reduce((sum: number, p) => sum + Number(p.costBasis), 0)
+    const totalDebt = properties.reduce((sum: number, p) => {
       const mortgageDebt = p.realEstateProperty?.mortgages.reduce(
-        (mSum, m) => mSum + Number(m.currentBalance),
+        (mSum: number, m) => mSum + Number(m.currentBalance),
         0
       ) || 0
       return sum + mortgageDebt
@@ -44,8 +44,8 @@ export async function GET() {
     const appreciationPercent = totalCostBasis > 0 ? (totalAppreciation / totalCostBasis) * 100 : 0
 
     // Calculate monthly cash flow
-    const monthlyIncome = properties.reduce((sum, p) => {
-      const propertyIncome = p.incomeStreams.reduce((iSum, income) => {
+    const monthlyIncome = properties.reduce((sum: number, p) => {
+      const propertyIncome = p.incomeStreams.reduce((iSum: number, income) => {
         const today = new Date()
         const incomeStart = new Date(income.startDate)
         const incomeEnd = income.endDate ? new Date(income.endDate) : null
@@ -62,8 +62,8 @@ export async function GET() {
       return sum + propertyIncome
     }, 0)
 
-    const monthlyExpenses = properties.reduce((sum, p) => {
-      const propertyExpenses = p.realEstateProperty?.expenses.reduce((eSum, expense) => {
+    const monthlyExpenses = properties.reduce((sum: number, p) => {
+      const propertyExpenses = p.realEstateProperty?.expenses.reduce((eSum: number, expense) => {
         const today = new Date()
         const expenseDate = new Date(expense.date)
         if (expense.recurring && expenseDate <= today) {
@@ -74,9 +74,9 @@ export async function GET() {
       return sum + propertyExpenses
     }, 0)
 
-    const monthlyMortgagePayments = properties.reduce((sum, p) => {
+    const monthlyMortgagePayments = properties.reduce((sum: number, p) => {
       const propertyPayments = p.realEstateProperty?.mortgages.reduce(
-        (mSum, m) => mSum + Number(m.monthlyPayment),
+        (mSum: number, m) => mSum + Number(m.monthlyPayment),
         0
       ) || 0
       return sum + propertyPayments
@@ -144,7 +144,7 @@ export async function GET() {
     const propertyRows = properties.map((property) => {
       const reProperty = property.realEstateProperty
       const mortgageDebt = reProperty?.mortgages.reduce(
-        (sum, m) => sum + Number(m.currentBalance),
+        (sum: number, m) => sum + Number(m.currentBalance),
         0
       ) || 0
       const equity = Number(property.currentValue) - mortgageDebt
