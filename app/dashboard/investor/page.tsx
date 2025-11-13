@@ -52,13 +52,18 @@ export default async function InvestorDashboard() {
     }))
   )
 
-  const allExpenses = properties.flatMap(p =>
-    p.realEstateProperty?.expenses.map(expense => ({
+  const allExpenses = properties.flatMap(p => [
+    ...(p.realEstateProperty?.expenses.map(expense => ({
       amount: Number(expense.amount),
       date: new Date(expense.date),
       recurring: expense.recurring,
-    })) || []
-  )
+    })) || []),
+    ...(p.realEstateProperty?.mortgages.map(mortgage => ({
+      amount: Number(mortgage.monthlyPayment),
+      date: new Date(mortgage.startDate),
+      recurring: true, // Mortgages are always recurring
+    })) || [])
+  ])
 
   const portfolioCashFlowData = generateCashFlowData(allIncomeStreams, allExpenses, 6)
   const currentCashFlow = calculateCurrentMonthlyCashFlow(allIncomeStreams, allExpenses)
@@ -76,9 +81,51 @@ export default async function InvestorDashboard() {
     return sum + mortgageDebt
   }, 0)
 
+  // Calculate total original loan amounts
+  const totalOriginalLoans = properties.reduce((sum, p) => {
+    const originalLoans = p.realEstateProperty?.mortgages.reduce(
+      (mSum, m) => mSum + Number(m.originalAmount),
+      0
+    ) || 0
+    return sum + originalLoans
+  }, 0)
+
+  // Calculate total income earned (sum of all recurring income over time)
+  const totalIncomeEarned = properties.reduce((sum, p) => {
+    const propertyIncome = p.incomeStreams.reduce((iSum, income) => {
+      if (!income.isRecurring) return iSum
+
+      const today = new Date()
+      const startDate = new Date(income.startDate)
+      const endDate = income.endDate ? new Date(income.endDate) : today
+
+      // Only count active or past income streams
+      if (startDate > today) return iSum
+
+      // Calculate months of income
+      const effectiveEndDate = endDate > today ? today : endDate
+      const monthsOfIncome = Math.max(0,
+        (effectiveEndDate.getFullYear() - startDate.getFullYear()) * 12 +
+        (effectiveEndDate.getMonth() - startDate.getMonth())
+      )
+
+      // Convert to monthly and multiply by months
+      const monthlyAmount = income.frequency === 'MONTHLY' ? Number(income.amount) :
+                          income.frequency === 'QUARTERLY' ? Number(income.amount) / 3 :
+                          income.frequency === 'ANNUALLY' ? Number(income.amount) / 12 : 0
+
+      return iSum + (monthlyAmount * monthsOfIncome)
+    }, 0)
+    return sum + propertyIncome
+  }, 0)
+
   // Equity = Total Value - Total Debt
   const totalEquity = totalValue - totalDebt
-  const totalROI = totalCostBasis > 0 ? ((totalValue - totalCostBasis) / totalCostBasis) * 100 : 0
+
+  // ROI = (Property Appreciation + Total Income) / (Purchase Price - Original Loans)
+  const propertyAppreciation = totalValue - totalCostBasis
+  const moneyIn = totalCostBasis - totalOriginalLoans
+  const totalROI = moneyIn > 0 ? ((propertyAppreciation + totalIncomeEarned) / moneyIn) * 100 : 0
 
   return (
     <div className="min-h-screen bg-gray-50">

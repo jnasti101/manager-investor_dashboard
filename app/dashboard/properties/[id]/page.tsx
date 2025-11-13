@@ -79,9 +79,27 @@ export default async function PropertyDetailPage({
     return sum
   }, 0)
 
-  const monthlyCashFlow = monthlyIncome - monthlyExpenses
+  const monthlyMortgagePayments = reProperty.mortgages.reduce((sum, mortgage) => {
+    return sum + Number(mortgage.monthlyPayment)
+  }, 0)
+
+  const monthlyCashFlow = monthlyIncome - monthlyExpenses - monthlyMortgagePayments
 
   // Generate historical cash flow data
+  // Combine regular expenses with mortgage payments
+  const allExpenses = [
+    ...reProperty.expenses.map(expense => ({
+      amount: Number(expense.amount),
+      date: new Date(expense.date),
+      recurring: expense.recurring,
+    })),
+    ...reProperty.mortgages.map(mortgage => ({
+      amount: Number(mortgage.monthlyPayment),
+      date: new Date(mortgage.startDate),
+      recurring: true, // Mortgages are always recurring
+    }))
+  ]
+
   const cashFlowData = generateCashFlowData(
     property.incomeStreams.map(stream => ({
       amount: Number(stream.amount),
@@ -90,11 +108,7 @@ export default async function PropertyDetailPage({
       endDate: stream.endDate ? new Date(stream.endDate) : null,
       isRecurring: stream.isRecurring,
     })),
-    reProperty.expenses.map(expense => ({
-      amount: Number(expense.amount),
-      date: new Date(expense.date),
-      recurring: expense.recurring,
-    })),
+    allExpenses,
     6 // Last 6 months
   )
 
