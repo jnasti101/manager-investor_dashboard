@@ -6,17 +6,11 @@ import { RecommendationsList } from '@/components/dashboard/recommendations-list
 import { CashFlowChart } from '@/components/charts/cash-flow-chart'
 import { PortfolioCompositionChart } from '@/components/charts/portfolio-composition-chart'
 import { formatCurrency, formatPercentage } from '@/lib/utils'
-import {
-  mockPortfolio,
-  mockProperties,
-  mockMetrics,
-  mockRecommendations,
-} from '@/lib/mock-data'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { generateCashFlowData, calculateCurrentMonthlyCashFlow } from '@/lib/cash-flow-calculator'
-import { CashFlowData } from '@/types'
+import { generateCashFlowData, calculateCurrentMonthlyCashFlow, calculateMonthlyAmount } from '@/lib/cash-flow-calculator'
+import { Property, FinancialMetrics, Recommendation } from '@/types'
 
 export default async function InvestorDashboard() {
   const session = await auth()
@@ -127,6 +121,86 @@ export default async function InvestorDashboard() {
   const moneyIn = totalCostBasis - totalOriginalLoans
   const totalROI = moneyIn > 0 ? ((propertyAppreciation + totalIncomeEarned) / moneyIn) * 100 : 0
 
+  // Map Prisma properties to Property type for PropertyList component
+  const mappedProperties: Property[] = properties.map(p => ({
+    id: p.id,
+    name: p.name,
+    address: p.realEstateProperty ?
+      `${p.realEstateProperty.address}, ${p.realEstateProperty.city}, ${p.realEstateProperty.state}` :
+      'No address',
+    purchasePrice: p.realEstateProperty ? Number(p.realEstateProperty.purchasePrice) : Number(p.costBasis),
+    currentValue: Number(p.currentValue),
+    purchaseDate: p.realEstateProperty ? new Date(p.realEstateProperty.purchaseDate) : new Date(p.createdAt),
+    propertyType: (p.realEstateProperty?.propertyType.toLowerCase().replace(/_/g, '-') || 'single-family') as any,
+    investorId: p.userId,
+  }))
+
+  // Calculate financial metrics for each property
+  const metricsMap: Record<string, FinancialMetrics> = {}
+  properties.forEach(p => {
+    const reProperty = p.realEstateProperty
+    if (!reProperty) return
+
+    // Calculate monthly rent (sum of recurring income)
+    const monthlyRent = p.incomeStreams.reduce((sum, income) => {
+      if (income.isRecurring) {
+        return sum + calculateMonthlyAmount(Number(income.amount), income.frequency)
+      }
+      return sum
+    }, 0)
+
+    // Calculate monthly expenses
+    const monthlyExpenses = reProperty.expenses.reduce((sum, expense) => {
+      if (expense.recurring) {
+        return sum + Number(expense.amount)
+      }
+      return sum
+    }, 0)
+
+    // Calculate monthly mortgage payments
+    const monthlyMortgagePayment = reProperty.mortgages.reduce((sum, m) => {
+      return sum + Number(m.monthlyPayment)
+    }, 0)
+
+    // NOI = Monthly Rent - Monthly Operating Expenses (not including mortgage)
+    const noi = (monthlyRent - monthlyExpenses) * 12 // Annual NOI
+
+    // Cap Rate = NOI / Current Value
+    const capRate = Number(p.currentValue) > 0 ? (noi / Number(p.currentValue)) * 100 : 0
+
+    // Total mortgage debt
+    const totalMortgageDebt = reProperty.mortgages.reduce((sum, m) => {
+      return sum + Number(m.currentBalance)
+    }, 0)
+
+    // Cash invested = Purchase Price - Original Loan Amount
+    const originalLoanAmount = reProperty.mortgages.reduce((sum, m) => {
+      return sum + Number(m.originalAmount)
+    }, 0)
+    const cashInvested = Number(p.costBasis) - originalLoanAmount
+
+    // Cash on Cash Return = Annual Cash Flow / Cash Invested
+    const annualCashFlow = (monthlyRent - monthlyExpenses - monthlyMortgagePayment) * 12
+    const cocReturn = cashInvested > 0 ? (annualCashFlow / cashInvested) * 100 : 0
+
+    // LTV = Loan Balance / Current Value
+    const ltv = Number(p.currentValue) > 0 ? (totalMortgageDebt / Number(p.currentValue)) * 100 : 0
+
+    metricsMap[p.id] = {
+      propertyId: p.id,
+      monthlyRent,
+      monthlyExpenses: monthlyExpenses + monthlyMortgagePayment,
+      noi,
+      capRate,
+      cocReturn,
+      irr: 0, // IRR calculation is complex, leaving at 0 for now
+      ltv,
+    }
+  })
+
+  // Fetch recommendations (placeholder for now - no data yet)
+  const recommendations: Recommendation[] = []
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar userName={session.user.name || 'User'} userRole={session.user.role.toLowerCase()} />
@@ -172,10 +246,10 @@ export default async function InvestorDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <PropertyList properties={mockProperties} metrics={mockMetrics} />
+            <PropertyList properties={mappedProperties} metrics={metricsMap} />
           </div>
           <div>
-            <RecommendationsList recommendations={mockRecommendations} />
+            <RecommendationsList recommendations={recommendations} />
           </div>
         </div>
       </main>
