@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { Building2, LogOut, Home, Briefcase } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { signOut } from 'next-auth/react'
 import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 interface NavbarProps {
   userName: string
@@ -14,29 +14,15 @@ interface NavbarProps {
 export function Navbar({ userName, userRole }: NavbarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const supabase = createClient()
 
   const handleLogout = async () => {
-    console.log('🔴 [LOGOUT] Button clicked - starting logout process')
-
     try {
-      console.log('🔴 [LOGOUT] Calling signOut...')
-      await signOut({
-        redirect: false,  // We'll handle redirect manually
-      })
-      console.log('🔴 [LOGOUT] signOut completed successfully')
-
-      console.log('🔴 [LOGOUT] Redirecting to /login...')
+      await supabase.auth.signOut()
       router.push('/login')
-      console.log('🔴 [LOGOUT] Router.push called')
-
-      // Force a hard refresh to clear any cached data
-      setTimeout(() => {
-        console.log('🔴 [LOGOUT] Forcing page refresh')
-        window.location.href = '/login'
-      }, 100)
-
+      router.refresh()
     } catch (error) {
-      console.error('🔴 [LOGOUT] Error during logout:', error)
+      console.error('Error during logout:', error)
     }
   }
 
