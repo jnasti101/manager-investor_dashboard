@@ -7,7 +7,7 @@ import { Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { signIn } from 'next-auth/react'
+import { signIn, useSession } from 'next-auth/react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -31,9 +31,16 @@ export default function LoginPage() {
       if (result?.error) {
         setError('Invalid email or password')
       } else {
-        // Successfully logged in, redirect based on role
-        // For now, redirect to investor dashboard (we'll add role-based routing later)
-        router.push('/dashboard/investor')
+        // Successfully logged in
+        // Fetch the session to get user role and redirect accordingly
+        const response = await fetch('/api/auth/session')
+        const session = await response.json()
+
+        if (session?.user?.role === 'MANAGER' || session?.user?.role === 'ADVISOR') {
+          router.push('/dashboard/manager')
+        } else {
+          router.push('/dashboard/investor')
+        }
         router.refresh()
       }
     } catch (err) {
