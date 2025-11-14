@@ -7,6 +7,7 @@ import { Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { createClient } from '@/lib/supabase/client'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -15,6 +16,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const supabase = createClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,21 +24,39 @@ export default function SignupPage() {
     setLoading(true)
 
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+      // Sign up with Supabase Auth
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
       })
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error || 'Registration failed')
+      if (signUpError) {
+        setError(signUpError.message)
         return
       }
 
-      // Registration successful, redirect to login
-      router.push('/login?registered=true')
+      if (data.user) {
+        // Create user in database with role
+        const res = await fetch('/api/auth/create-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: data.user.id,
+            email,
+            name,
+            role: 'CLIENT'
+          }),
+        })
+
+        if (!res.ok) {
+          setError('Error creating user profile')
+          return
+        }
+
+        // Registration successful, redirect to investor dashboard
+        router.push('/dashboard/investor')
+        router.refresh()
+      }
     } catch (err) {
       setError('An error occurred. Please try again.')
     } finally {

@@ -7,7 +7,7 @@ import { Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { signIn, useSession } from 'next-auth/react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const supabase = createClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,21 +23,31 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const result = await signIn('credentials', {
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
-        redirect: false,
       })
 
-      if (result?.error) {
+      if (signInError) {
         setError('Invalid email or password')
-      } else {
-        // Successfully logged in
-        // Fetch the session to get user role and redirect accordingly
-        const response = await fetch('/api/auth/session')
-        const session = await response.json()
+        return
+      }
 
-        if (session?.user?.role === 'MANAGER' || session?.user?.role === 'ADVISOR') {
+      if (data.user) {
+        // Get user role from database
+        const { data: userData, error: userError } = await supabase
+          .from('User')
+          .select('role')
+          .eq('email', email)
+          .single()
+
+        if (userError || !userData) {
+          setError('Error fetching user data')
+          return
+        }
+
+        // Redirect based on role
+        if (userData.role === 'MANAGER' || userData.role === 'ADVISOR') {
           router.push('/dashboard/manager')
         } else {
           router.push('/dashboard/investor')

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
+import { createClient } from '@/lib/supabase/server'
 
 const propertySchema = z.object({
   name: z.string().min(1),
@@ -22,15 +22,17 @@ const propertySchema = z.object({
 
 // GET all properties for user
 export async function GET(req: Request) {
-  const session = await auth()
-  if (!session?.user) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
     const properties = await prisma.asset.findMany({
       where: {
-        userId: session.user.id,
+        userId: user.id,
         assetType: 'real_estate',
       },
       include: {
@@ -58,8 +60,10 @@ export async function GET(req: Request) {
 
 // POST create new property
 export async function POST(req: Request) {
-  const session = await auth()
-  if (!session?.user) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -71,7 +75,7 @@ export async function POST(req: Request) {
       // Create asset
       const asset = await tx.asset.create({
         data: {
-          userId: session.user.id,
+          userId: user.id,
           assetType: 'real_estate',
           name: validated.name,
           currentValue: validated.currentValue,

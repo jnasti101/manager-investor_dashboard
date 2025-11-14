@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -14,7 +16,7 @@ export async function GET() {
     // Fetch portfolio data
     const properties = await prisma.asset.findMany({
       where: {
-        userId: session.user.id,
+        userId: user.id,
         assetType: 'real_estate',
       },
       include: {

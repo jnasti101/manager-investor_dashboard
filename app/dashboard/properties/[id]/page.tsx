@@ -1,4 +1,3 @@
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -11,14 +10,27 @@ import { ExpenseForm } from '@/components/properties/expense-form'
 import { MortgageForm } from '@/components/properties/mortgage-form'
 import { CashFlowChart } from '@/components/charts/cash-flow-chart'
 import { generateCashFlowData } from '@/lib/cash-flow-calculator'
+import { createClient } from '@/lib/supabase/server'
 
 export default async function PropertyDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
-  const session = await auth()
-  if (!session?.user) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  // Get user data from database
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { id: true, name: true, email: true, role: true }
+  })
+
+  if (!dbUser) {
     redirect('/login')
   }
 
@@ -27,7 +39,7 @@ export default async function PropertyDetailPage({
   const property = await prisma.asset.findFirst({
     where: {
       id: id,
-      userId: session.user.id,
+      userId: dbUser.id,
       assetType: 'real_estate',
     },
     include: {

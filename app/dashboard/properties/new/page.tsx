@@ -1,11 +1,24 @@
-import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { PropertyForm } from '@/components/properties/property-form'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/prisma'
 
 export default async function NewPropertyPage() {
-  const session = await auth()
-  if (!session?.user) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  // Get user data from database
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { id: true, name: true, email: true, role: true }
+  })
+
+  if (!dbUser) {
     redirect('/login')
   }
 

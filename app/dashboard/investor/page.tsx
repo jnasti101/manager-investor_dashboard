@@ -6,27 +6,39 @@ import { RecommendationsList } from '@/components/dashboard/recommendations-list
 import { CashFlowChart } from '@/components/charts/cash-flow-chart'
 import { PortfolioCompositionChart } from '@/components/charts/portfolio-composition-chart'
 import { formatCurrency, formatPercentage } from '@/lib/utils'
-import { auth } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { generateCashFlowData, calculateCurrentMonthlyCashFlow, calculateMonthlyAmount } from '@/lib/cash-flow-calculator'
 import { Property, FinancialMetrics, Recommendation } from '@/types'
 
 export default async function InvestorDashboard() {
-  const session = await auth()
-  if (!session?.user) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  // Get user data from database
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { id: true, name: true, email: true, role: true }
+  })
+
+  if (!dbUser) {
     redirect('/login')
   }
 
   // Redirect managers to their dashboard
-  if (session.user.role === 'MANAGER' || session.user.role === 'ADVISOR') {
+  if (dbUser.role === 'MANAGER' || dbUser.role === 'ADVISOR') {
     redirect('/dashboard/manager')
   }
 
   // Fetch all properties with income and expense data
   const properties = await prisma.asset.findMany({
     where: {
-      userId: session.user.id,
+      userId: dbUser.id,
       assetType: 'real_estate',
     },
     include: {
@@ -208,7 +220,7 @@ export default async function InvestorDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar userName={session.user.name || 'User'} userRole={session.user.role.toLowerCase()} />
+      <Navbar userName={dbUser.name || 'User'} userRole={dbUser.role.toLowerCase()} />
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">

@@ -5,19 +5,31 @@ import { InvestorOverviewTable } from '@/components/dashboard/investor-overview-
 import { ActionItems } from '@/components/dashboard/action-items'
 import { RecentActivity } from '@/components/dashboard/recent-activity'
 import { formatCurrency } from '@/lib/utils'
-import { auth } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { calculateMonthlyAmount } from '@/lib/cash-flow-calculator'
 
 export default async function ManagerDashboard() {
-  const session = await auth()
-  if (!session?.user) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  // Get user data from database
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { id: true, name: true, email: true, role: true }
+  })
+
+  if (!dbUser) {
     redirect('/login')
   }
 
   // Redirect clients to their dashboard
-  if (session.user.role === 'CLIENT') {
+  if (dbUser.role === 'CLIENT') {
     redirect('/dashboard/investor')
   }
 
@@ -139,7 +151,7 @@ export default async function ManagerDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar userName={session.user.name || 'Manager'} userRole={session.user.role.toLowerCase()} />
+      <Navbar userName={dbUser.name || 'Manager'} userRole={dbUser.role.toLowerCase()} />
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">

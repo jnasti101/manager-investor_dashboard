@@ -1,4 +1,3 @@
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -7,16 +6,29 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatPercentage } from '@/lib/utils'
 import { Building2, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { ExportButton } from '@/components/properties/export-button'
+import { createClient } from '@/lib/supabase/server'
 
 export default async function PropertiesPage() {
-  const session = await auth()
-  if (!session?.user) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  // Get user data from database
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { id: true, name: true, email: true, role: true }
+  })
+
+  if (!dbUser) {
     redirect('/login')
   }
 
   const properties = await prisma.asset.findMany({
     where: {
-      userId: session.user.id,
+      userId: dbUser.id,
       assetType: 'real_estate',
     },
     include: {

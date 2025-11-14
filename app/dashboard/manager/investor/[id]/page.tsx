@@ -9,7 +9,7 @@ import { PortfolioCompositionChart } from '@/components/charts/portfolio-composi
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatPercentage } from '@/lib/utils'
 import { Property, FinancialMetrics, Recommendation } from '@/types'
-import { auth } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { generateCashFlowData, calculateCurrentMonthlyCashFlow, calculateMonthlyAmount } from '@/lib/cash-flow-calculator'
@@ -17,22 +17,37 @@ import { generateCashFlowData, calculateCurrentMonthlyCashFlow, calculateMonthly
 export default async function InvestorDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const session = await auth()
-  if (!session?.user) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  // Get user data from database
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { id: true, name: true, email: true, role: true }
+  })
+
+  if (!dbUser) {
     redirect('/login')
   }
 
   // Only managers and advisors can view this page
-  if (session.user.role === 'CLIENT') {
+  if (dbUser.role === 'CLIENT') {
     redirect('/dashboard/investor')
   }
+
+  // Await params
+  const { id } = await params
 
   // Fetch the investor with all their portfolio data
   const investor = await prisma.user.findUnique({
     where: {
-      id: params.id,
+      id: id,
       role: 'CLIENT', // Only show CLIENT users as investors
     },
     include: {
@@ -228,7 +243,7 @@ export default async function InvestorDetailPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar userName={session.user.name || 'Manager'} userRole={session.user.role.toLowerCase()} />
+      <Navbar userName={dbUser.name || 'Manager'} userRole={dbUser.role.toLowerCase()} />
 
       <main className="container mx-auto px-4 py-8">
         {/* Back button */}

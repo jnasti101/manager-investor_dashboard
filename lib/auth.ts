@@ -19,22 +19,43 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         mfaToken: { label: 'MFA Token', type: 'text' },
       },
       async authorize(credentials) {
+        console.log('[AUTH] Starting authorization...')
+        console.log('[AUTH] Credentials received:', { email: credentials?.email, hasPassword: !!credentials?.password })
+
         const validated = loginSchema.safeParse(credentials)
-        if (!validated.success) return null
+        if (!validated.success) {
+          console.log('[AUTH] Validation failed:', validated.error)
+          return null
+        }
 
         const { email, password, mfaToken } = validated.data
+        console.log('[AUTH] Looking up user:', email)
 
         const user = await prisma.user.findUnique({
           where: { email },
         })
 
-        if (!user || !user.passwordHash) return null
+        if (!user) {
+          console.log('[AUTH] User not found')
+          return null
+        }
 
+        console.log('[AUTH] User found:', { id: user.id, email: user.email, role: user.role, hasPasswordHash: !!user.passwordHash })
+
+        if (!user.passwordHash) {
+          console.log('[AUTH] No password hash found')
+          return null
+        }
+
+        console.log('[AUTH] Comparing passwords...')
         const passwordMatch = await bcrypt.compare(password, user.passwordHash)
+        console.log('[AUTH] Password match:', passwordMatch)
+
         if (!passwordMatch) return null
 
         // Check MFA if enabled
         if (user.mfaEnabled) {
+          console.log('[AUTH] MFA is enabled')
           if (!mfaToken || !user.mfaSecret) return null
 
           const speakeasy = require('speakeasy')
@@ -48,6 +69,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (!verified) return null
         }
 
+        console.log('[AUTH] Authorization successful!')
         return {
           id: user.id,
           email: user.email,

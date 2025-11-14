@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { createClient } from '@/lib/supabase/server'
 
 const mortgageSchema = z.object({
   lender: z.string().min(1),
@@ -19,8 +19,10 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -31,7 +33,7 @@ export async function GET(
     const property = await prisma.asset.findFirst({
       where: {
         id: id,
-        userId: session.user.id,
+        userId: user.id,
         assetType: 'real_estate',
       },
       include: {
@@ -64,8 +66,10 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -76,7 +80,7 @@ export async function POST(
     const property = await prisma.asset.findFirst({
       where: {
         id: id,
-        userId: session.user.id,
+        userId: user.id,
         assetType: 'real_estate',
       },
       include: {
