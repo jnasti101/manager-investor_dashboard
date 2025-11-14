@@ -16,6 +16,11 @@ export default async function ManagerDashboard() {
     redirect('/login')
   }
 
+  // Redirect clients to their dashboard
+  if (session.user.role === 'CLIENT') {
+    redirect('/dashboard/investor')
+  }
+
   // Fetch all investors (users with CLIENT role) and their portfolio data
   const investors = await prisma.user.findMany({
     where: {

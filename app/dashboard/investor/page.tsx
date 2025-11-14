@@ -18,6 +18,11 @@ export default async function InvestorDashboard() {
     redirect('/login')
   }
 
+  // Redirect managers to their dashboard
+  if (session.user.role === 'MANAGER' || session.user.role === 'ADVISOR') {
+    redirect('/dashboard/manager')
+  }
+
   // Fetch all properties with income and expense data
   const properties = await prisma.asset.findMany({
     where: {
