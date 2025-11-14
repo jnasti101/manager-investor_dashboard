@@ -13,6 +13,16 @@ export async function GET() {
   }
 
   try {
+    // Get user data from database
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { id: true, name: true, email: true }
+    })
+
+    if (!dbUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     // Fetch portfolio data
     const properties = await prisma.asset.findMany({
       where: {
@@ -99,7 +109,7 @@ export async function GET() {
 
     doc.setFontSize(10)
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, 28, { align: 'center' })
-    doc.text(`Investor: ${session.user.name || session.user.email}`, pageWidth / 2, 34, { align: 'center' })
+    doc.text(`Investor: ${dbUser.name || dbUser.email}`, pageWidth / 2, 34, { align: 'center' })
 
     // Portfolio Summary
     doc.setFontSize(14)
