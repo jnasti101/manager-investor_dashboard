@@ -8,64 +8,227 @@ import { CashFlowChart } from '@/components/charts/cash-flow-chart'
 import { PortfolioCompositionChart } from '@/components/charts/portfolio-composition-chart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatPercentage } from '@/lib/utils'
-import {
-  mockPortfolio,
-  mockProperties,
-  mockMetrics,
-  mockCashFlowData,
-  mockRecommendations,
-} from '@/lib/mock-data'
+import { Property, FinancialMetrics, Recommendation } from '@/types'
+import { auth } from '@/lib/auth'
+import { redirect, notFound } from 'next/navigation'
+import { prisma } from '@/lib/prisma'
+import { generateCashFlowData, calculateCurrentMonthlyCashFlow, calculateMonthlyAmount } from '@/lib/cash-flow-calculator'
 
-// Mock investor data - in production, this would come from your database
-const getInvestorData = (id: string) => {
-  const investors = {
-    '1': {
-      id: '1',
-      name: 'John Investor',
-      email: 'john@example.com',
-      phone: '+1 (555) 123-4567',
-      joinedDate: new Date('2020-01-15'),
-      propertiesCount: 3,
-      totalValue: 1315000,
-      monthlyIncome: 5600,
-      totalROI: 13.1,
-      status: 'active' as const,
-    },
-    '2': {
-      id: '2',
-      name: 'Sarah Thompson',
-      email: 'sarah@example.com',
-      phone: '+1 (555) 234-5678',
-      joinedDate: new Date('2021-03-20'),
-      propertiesCount: 2,
-      totalValue: 850000,
-      monthlyIncome: 4200,
-      totalROI: 11.8,
-      status: 'active' as const,
-    },
-    '3': {
-      id: '3',
-      name: 'Michael Chen',
-      email: 'michael@example.com',
-      phone: '+1 (555) 345-6789',
-      joinedDate: new Date('2019-11-10'),
-      propertiesCount: 5,
-      totalValue: 2100000,
-      monthlyIncome: 8900,
-      totalROI: 14.5,
-      status: 'review-needed' as const,
-    },
+export default async function InvestorDetailPage({
+  params,
+}: {
+  params: { id: string }
+}) {
+  const session = await auth()
+  if (!session?.user) {
+    redirect('/login')
   }
 
-  return investors[id as keyof typeof investors] || investors['1']
-}
+  // Only managers and advisors can view this page
+  if (session.user.role === 'CLIENT') {
+    redirect('/dashboard/investor')
+  }
 
-export default function InvestorDetailPage({ params }: { params: { id: string } }) {
-  const investor = getInvestorData(params.id)
+  // Fetch the investor with all their portfolio data
+  const investor = await prisma.user.findUnique({
+    where: {
+      id: params.id,
+      role: 'CLIENT', // Only show CLIENT users as investors
+    },
+    include: {
+      assets: {
+        where: {
+          assetType: 'real_estate',
+        },
+        include: {
+          realEstateProperty: {
+            include: {
+              expenses: true,
+              mortgages: true,
+            },
+          },
+          incomeStreams: true,
+        },
+      },
+    },
+  })
+
+  // If investor not found or is not a CLIENT, show 404
+  if (!investor) {
+    notFound()
+  }
+
+  const properties = investor.assets
+
+  // Calculate portfolio-wide cash flow data
+  const allIncomeStreams = properties.flatMap(p =>
+    p.incomeStreams.map(stream => ({
+      amount: Number(stream.amount),
+      frequency: stream.frequency,
+      startDate: new Date(stream.startDate),
+      endDate: stream.endDate ? new Date(stream.endDate) : null,
+      isRecurring: stream.isRecurring,
+    }))
+  )
+
+  const allExpenses = properties.flatMap(p => [
+    ...(p.realEstateProperty?.expenses.map(expense => ({
+      amount: Number(expense.amount),
+      date: new Date(expense.date),
+      recurring: expense.recurring,
+    })) || []),
+    ...(p.realEstateProperty?.mortgages.map(mortgage => ({
+      amount: Number(mortgage.monthlyPayment),
+      date: new Date(mortgage.startDate),
+      recurring: true,
+    })) || [])
+  ])
+
+  const portfolioCashFlowData = generateCashFlowData(allIncomeStreams, allExpenses, 6)
+  const currentCashFlow = calculateCurrentMonthlyCashFlow(allIncomeStreams, allExpenses)
+
+  // Calculate portfolio totals
+  const totalValue = properties.reduce((sum, p) => sum + Number(p.currentValue), 0)
+  const totalCostBasis = properties.reduce((sum, p) => sum + (Number(p.costBasis) || 0), 0)
+
+  // Calculate total mortgage debt
+  const totalDebt = properties.reduce((sum, p) => {
+    const mortgageDebt = p.realEstateProperty?.mortgages.reduce(
+      (mSum, m) => mSum + Number(m.currentBalance),
+      0
+    ) || 0
+    return sum + mortgageDebt
+  }, 0)
+
+  // Calculate total original loan amounts
+  const totalOriginalLoans = properties.reduce((sum, p) => {
+    const originalLoans = p.realEstateProperty?.mortgages.reduce(
+      (mSum, m) => mSum + Number(m.originalAmount),
+      0
+    ) || 0
+    return sum + originalLoans
+  }, 0)
+
+  // Calculate total income earned (sum of all recurring income over time)
+  const totalIncomeEarned = properties.reduce((sum, p) => {
+    const propertyIncome = p.incomeStreams.reduce((iSum, income) => {
+      if (!income.isRecurring) return iSum
+
+      const today = new Date()
+      const startDate = new Date(income.startDate)
+      const endDate = income.endDate ? new Date(income.endDate) : today
+
+      // Only count active or past income streams
+      if (startDate > today) return iSum
+
+      // Calculate months of income
+      const effectiveEndDate = endDate > today ? today : endDate
+      const monthsOfIncome = Math.max(0,
+        (effectiveEndDate.getFullYear() - startDate.getFullYear()) * 12 +
+        (effectiveEndDate.getMonth() - startDate.getMonth())
+      )
+
+      // Convert to monthly and multiply by months
+      const monthlyAmount = income.frequency === 'MONTHLY' ? Number(income.amount) :
+                          income.frequency === 'QUARTERLY' ? Number(income.amount) / 3 :
+                          income.frequency === 'ANNUALLY' ? Number(income.amount) / 12 : 0
+
+      return iSum + (monthlyAmount * monthsOfIncome)
+    }, 0)
+    return sum + propertyIncome
+  }, 0)
+
+  // Equity = Total Value - Total Debt
+  const totalEquity = totalValue - totalDebt
+
+  // ROI = (Property Appreciation + Total Income) / (Purchase Price - Original Loans)
+  const propertyAppreciation = totalValue - totalCostBasis
+  const moneyIn = totalCostBasis - totalOriginalLoans
+  const totalROI = moneyIn > 0 ? ((propertyAppreciation + totalIncomeEarned) / moneyIn) * 100 : 0
+
+  // Map Prisma properties to Property type for PropertyList component
+  const mappedProperties: Property[] = properties.map(p => ({
+    id: p.id,
+    name: p.name,
+    address: p.realEstateProperty ?
+      `${p.realEstateProperty.address}, ${p.realEstateProperty.city}, ${p.realEstateProperty.state}` :
+      'No address',
+    purchasePrice: p.realEstateProperty ? Number(p.realEstateProperty.purchasePrice) : Number(p.costBasis),
+    currentValue: Number(p.currentValue),
+    purchaseDate: p.realEstateProperty ? new Date(p.realEstateProperty.purchaseDate) : new Date(p.createdAt),
+    propertyType: (p.realEstateProperty?.propertyType.toLowerCase().replace(/_/g, '-') || 'single-family') as any,
+    investorId: p.userId,
+  }))
+
+  // Calculate financial metrics for each property
+  const metricsMap: Record<string, FinancialMetrics> = {}
+  properties.forEach(p => {
+    const reProperty = p.realEstateProperty
+    if (!reProperty) return
+
+    // Calculate monthly rent (sum of recurring income)
+    const monthlyRent = p.incomeStreams.reduce((sum, income) => {
+      if (income.isRecurring) {
+        return sum + calculateMonthlyAmount(Number(income.amount), income.frequency)
+      }
+      return sum
+    }, 0)
+
+    // Calculate monthly expenses
+    const monthlyExpenses = reProperty.expenses.reduce((sum, expense) => {
+      if (expense.recurring) {
+        return sum + Number(expense.amount)
+      }
+      return sum
+    }, 0)
+
+    // Calculate monthly mortgage payments
+    const monthlyMortgagePayment = reProperty.mortgages.reduce((sum, m) => {
+      return sum + Number(m.monthlyPayment)
+    }, 0)
+
+    // NOI = Monthly Rent - Monthly Operating Expenses (not including mortgage)
+    const noi = (monthlyRent - monthlyExpenses) * 12 // Annual NOI
+
+    // Cap Rate = NOI / Current Value
+    const capRate = Number(p.currentValue) > 0 ? (noi / Number(p.currentValue)) * 100 : 0
+
+    // Total mortgage debt
+    const totalMortgageDebt = reProperty.mortgages.reduce((sum, m) => {
+      return sum + Number(m.currentBalance)
+    }, 0)
+
+    // Cash invested = Purchase Price - Original Loan Amount
+    const originalLoanAmount = reProperty.mortgages.reduce((sum, m) => {
+      return sum + Number(m.originalAmount)
+    }, 0)
+    const cashInvested = Number(p.costBasis) - originalLoanAmount
+
+    // Cash on Cash Return = Annual Cash Flow / Cash Invested
+    const annualCashFlow = (monthlyRent - monthlyExpenses - monthlyMortgagePayment) * 12
+    const cocReturn = cashInvested > 0 ? (annualCashFlow / cashInvested) * 100 : 0
+
+    // LTV = Loan Balance / Current Value
+    const ltv = Number(p.currentValue) > 0 ? (totalMortgageDebt / Number(p.currentValue)) * 100 : 0
+
+    metricsMap[p.id] = {
+      propertyId: p.id,
+      monthlyRent,
+      monthlyExpenses: monthlyExpenses + monthlyMortgagePayment,
+      noi,
+      capRate,
+      cocReturn,
+      irr: 0, // IRR calculation is complex, leaving at 0 for now
+      ltv,
+    }
+  })
+
+  // Fetch recommendations (placeholder for now - no data yet)
+  const recommendations: Recommendation[] = []
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar userName="Jane Manager" userRole="manager" />
+      <Navbar userName={session.user.name || 'Manager'} userRole={session.user.role.toLowerCase()} />
 
       <main className="container mx-auto px-4 py-8">
         {/* Back button */}
@@ -85,7 +248,7 @@ export default function InvestorDetailPage({ params }: { params: { id: string } 
                 <User className="h-8 w-8 text-indigo-600" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">{investor.name}</h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">{investor.name || 'Unknown Investor'}</h1>
                 <div className="space-y-1 text-sm text-gray-600">
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4" />
@@ -93,20 +256,14 @@ export default function InvestorDetailPage({ params }: { params: { id: string } 
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    <span>Client since {investor.joinedDate.toLocaleDateString()}</span>
+                    <span>Client since {new Date(investor.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
               </div>
             </div>
             <div>
-              <span
-                className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                  investor.status === 'active'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-orange-100 text-orange-700'
-                }`}
-              >
-                {investor.status === 'active' ? 'Active' : 'Review Needed'}
+              <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
+                Active
               </span>
             </div>
           </div>
@@ -116,82 +273,53 @@ export default function InvestorDetailPage({ params }: { params: { id: string } 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             title="Total Portfolio Value"
-            value={formatCurrency(mockPortfolio.totalValue)}
+            value={formatCurrency(totalValue)}
             icon={Building2}
-            trend={{ value: '8.2%', positive: true }}
           />
           <StatCard
             title="Monthly Cash Flow"
-            value={formatCurrency(mockPortfolio.monthlyIncome - mockPortfolio.monthlyExpenses)}
+            value={formatCurrency(currentCashFlow.netCashFlow)}
             icon={DollarSign}
-            trend={{ value: '5.3%', positive: true }}
           />
           <StatCard
             title="Total ROI"
-            value={formatPercentage(mockPortfolio.totalROI)}
+            value={formatPercentage(totalROI)}
             icon={TrendingUp}
-            trend={{ value: '2.1%', positive: true }}
           />
           <StatCard
             title="Properties Owned"
-            value={mockPortfolio.propertiesCount.toString()}
+            value={properties.length.toString()}
             icon={Building2}
           />
         </div>
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <CashFlowChart data={mockCashFlowData} />
+          <CashFlowChart data={portfolioCashFlowData} />
           <PortfolioCompositionChart
-            equity={mockPortfolio.totalEquity}
-            debt={mockPortfolio.totalDebt}
+            equity={totalEquity}
+            debt={totalDebt}
           />
         </div>
 
         {/* Properties and Recommendations */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
-            <PropertyList properties={mockProperties} metrics={mockMetrics} />
+            <PropertyList properties={mappedProperties} metrics={metricsMap} />
           </div>
           <div>
-            <RecommendationsList recommendations={mockRecommendations} />
+            <RecommendationsList recommendations={recommendations} />
           </div>
         </div>
 
-        {/* Activity Log */}
+        {/* Activity Log - Placeholder for now */}
         <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex gap-3 pb-4 border-b">
-                <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Calendar className="h-4 w-4 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-gray-900 font-medium">Refinance recommendation sent</p>
-                  <p className="text-xs text-gray-600 mt-1">123 Oak Street - 2 days ago</p>
-                </div>
-              </div>
-              <div className="flex gap-3 pb-4 border-b">
-                <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <DollarSign className="h-4 w-4 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-gray-900 font-medium">Monthly rent collected</p>
-                  <p className="text-xs text-gray-600 mt-1">All properties - 5 days ago</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <TrendingUp className="h-4 w-4 text-purple-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-gray-900 font-medium">Portfolio review completed</p>
-                  <p className="text-xs text-gray-600 mt-1">Q3 2024 - 1 week ago</p>
-                </div>
-              </div>
+            <div className="text-center py-8 text-gray-500">
+              <p>No recent activity to display</p>
             </div>
           </CardContent>
         </Card>
