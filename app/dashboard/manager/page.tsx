@@ -5,97 +5,136 @@ import { InvestorOverviewTable } from '@/components/dashboard/investor-overview-
 import { ActionItems } from '@/components/dashboard/action-items'
 import { RecentActivity } from '@/components/dashboard/recent-activity'
 import { formatCurrency } from '@/lib/utils'
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { prisma } from '@/lib/prisma'
+import { calculateMonthlyAmount } from '@/lib/cash-flow-calculator'
 
-const mockInvestors = [
-  {
-    id: '1',
-    name: 'John Investor',
-    email: 'john@example.com',
-    propertiesCount: 3,
-    totalValue: 1315000,
-    monthlyIncome: 5600,
-    totalROI: 13.1,
-    status: 'active' as const,
-  },
-  {
-    id: '2',
-    name: 'Sarah Thompson',
-    email: 'sarah@example.com',
-    propertiesCount: 2,
-    totalValue: 850000,
-    monthlyIncome: 4200,
-    totalROI: 11.8,
-    status: 'active' as const,
-  },
-  {
-    id: '3',
-    name: 'Michael Chen',
-    email: 'michael@example.com',
-    propertiesCount: 5,
-    totalValue: 2100000,
-    monthlyIncome: 8900,
-    totalROI: 14.5,
-    status: 'review-needed' as const,
-  },
-]
+export default async function ManagerDashboard() {
+  const session = await auth()
+  if (!session?.user) {
+    redirect('/login')
+  }
 
-const mockActionItems = [
-  {
-    id: '1',
-    title: 'Refinance Opportunity',
-    description: 'John\'s Oak Street property qualifies for refinancing at 1.5% lower rate',
-    priority: 'high' as const,
-    investorName: 'John Investor',
-  },
-  {
-    id: '2',
-    title: 'Property Valuation Update',
-    description: 'Annual valuation needed for Michael\'s commercial properties',
-    priority: 'medium' as const,
-    investorName: 'Michael Chen',
-  },
-  {
-    id: '3',
-    title: 'Lease Renewal',
-    description: 'Sarah\'s condo lease expires in 60 days',
-    priority: 'medium' as const,
-    investorName: 'Sarah Thompson',
-  },
-]
+  // Fetch all investors (users with CLIENT role) and their portfolio data
+  const investors = await prisma.user.findMany({
+    where: {
+      role: 'CLIENT',
+    },
+    include: {
+      assets: {
+        where: {
+          assetType: 'real_estate',
+        },
+        include: {
+          realEstateProperty: {
+            include: {
+              mortgages: true,
+              expenses: true,
+            },
+          },
+          incomeStreams: true,
+        },
+      },
+    },
+  })
 
-const mockActivities = [
-  {
-    id: '1',
-    type: 'recommendation_sent' as const,
-    description: 'Sent refinance recommendation',
-    timestamp: new Date('2024-10-27'),
-    investorName: 'John Investor',
-  },
-  {
-    id: '2',
-    type: 'property_added' as const,
-    description: 'Added new property to portfolio',
-    timestamp: new Date('2024-10-26'),
-    investorName: 'Michael Chen',
-  },
-  {
-    id: '3',
-    type: 'report_generated' as const,
-    description: 'Generated Q3 performance report',
-    timestamp: new Date('2024-10-25'),
-    investorName: 'Sarah Thompson',
-  },
-]
+  // Calculate portfolio metrics for each investor
+  const investorMetrics = investors.map(investor => {
+    const properties = investor.assets
+    const propertiesCount = properties.length
 
-export default function ManagerDashboard() {
-  const totalPortfolioValue = mockInvestors.reduce((sum, inv) => sum + inv.totalValue, 0)
-  const totalMonthlyIncome = mockInvestors.reduce((sum, inv) => sum + inv.monthlyIncome, 0)
-  const totalProperties = mockInvestors.reduce((sum, inv) => sum + inv.propertiesCount, 0)
-  const avgROI = mockInvestors.reduce((sum, inv) => sum + inv.totalROI, 0) / mockInvestors.length
+    // Total portfolio value
+    const totalValue = properties.reduce((sum, p) => sum + Number(p.currentValue), 0)
+    const totalCostBasis = properties.reduce((sum, p) => sum + Number(p.costBasis || 0), 0)
+
+    // Calculate total mortgage debt
+    const totalDebt = properties.reduce((sum, p) => {
+      const mortgageDebt = p.realEstateProperty?.mortgages.reduce(
+        (mSum, m) => mSum + Number(m.currentBalance),
+        0
+      ) || 0
+      return sum + mortgageDebt
+    }, 0)
+
+    // Calculate total original loans
+    const totalOriginalLoans = properties.reduce((sum, p) => {
+      const originalLoans = p.realEstateProperty?.mortgages.reduce(
+        (mSum, m) => mSum + Number(m.originalAmount),
+        0
+      ) || 0
+      return sum + originalLoans
+    }, 0)
+
+    // Calculate total income earned
+    const totalIncomeEarned = properties.reduce((sum, p) => {
+      const propertyIncome = p.incomeStreams.reduce((iSum, income) => {
+        if (!income.isRecurring) return iSum
+
+        const today = new Date()
+        const startDate = new Date(income.startDate)
+        const endDate = income.endDate ? new Date(income.endDate) : today
+
+        if (startDate > today) return iSum
+
+        const effectiveEndDate = endDate > today ? today : endDate
+        const monthsOfIncome = Math.max(0,
+          (effectiveEndDate.getFullYear() - startDate.getFullYear()) * 12 +
+          (effectiveEndDate.getMonth() - startDate.getMonth())
+        )
+
+        const monthlyAmount = income.frequency === 'MONTHLY' ? Number(income.amount) :
+                            income.frequency === 'QUARTERLY' ? Number(income.amount) / 3 :
+                            income.frequency === 'ANNUALLY' ? Number(income.amount) / 12 : 0
+
+        return iSum + (monthlyAmount * monthsOfIncome)
+      }, 0)
+      return sum + propertyIncome
+    }, 0)
+
+    // Calculate monthly income
+    const monthlyIncome = properties.reduce((sum, p) => {
+      const propertyIncome = p.incomeStreams.reduce((iSum, income) => {
+        if (income.isRecurring) {
+          return iSum + calculateMonthlyAmount(Number(income.amount), income.frequency)
+        }
+        return iSum
+      }, 0)
+      return sum + propertyIncome
+    }, 0)
+
+    // Calculate ROI
+    const propertyAppreciation = totalValue - totalCostBasis
+    const moneyIn = totalCostBasis - totalOriginalLoans
+    const totalROI = moneyIn > 0 ? ((propertyAppreciation + totalIncomeEarned) / moneyIn) * 100 : 0
+
+    return {
+      id: investor.id,
+      name: investor.name || 'Unknown',
+      email: investor.email,
+      propertiesCount,
+      totalValue,
+      monthlyIncome,
+      totalROI,
+      status: 'active' as const, // For now, all are active
+    }
+  })
+
+  // Calculate aggregate metrics
+  const totalPortfolioValue = investorMetrics.reduce((sum, inv) => sum + inv.totalValue, 0)
+  const totalMonthlyIncome = investorMetrics.reduce((sum, inv) => sum + inv.monthlyIncome, 0)
+  const totalProperties = investorMetrics.reduce((sum, inv) => sum + inv.propertiesCount, 0)
+  const avgROI = investorMetrics.length > 0
+    ? investorMetrics.reduce((sum, inv) => sum + inv.totalROI, 0) / investorMetrics.length
+    : 0
+
+  // Placeholder for action items and activities
+  const mockActionItems: any[] = []
+  const mockActivities: any[] = []
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar userName="Jane Manager" userRole="manager" />
+      <Navbar userName={session.user.name || 'Manager'} userRole={session.user.role.toLowerCase()} />
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
@@ -108,7 +147,7 @@ export default function ManagerDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             title="Total Investors"
-            value={mockInvestors.length.toString()}
+            value={investorMetrics.length.toString()}
             icon={Users}
           />
           <StatCard
@@ -130,7 +169,7 @@ export default function ManagerDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
-            <InvestorOverviewTable investors={mockInvestors} />
+            <InvestorOverviewTable investors={investorMetrics} />
           </div>
           <div className="space-y-6">
             <ActionItems items={mockActionItems} />
