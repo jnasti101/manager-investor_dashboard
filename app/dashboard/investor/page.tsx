@@ -216,30 +216,36 @@ export default async function InvestorDashboard() {
   })
 
   // Fetch recommendations
-  const recommendationsData = await prisma.recommendation.findMany({
-    where: {
-      userId: dbUser.id,
-      dismissedAt: null, // Don't show dismissed recommendations
-    },
-    orderBy: [
-      { priority: 'desc' },
-      { createdAt: 'desc' },
-    ],
-  })
+  let recommendations: Recommendation[] = []
+  try {
+    const recommendationsData = await prisma.recommendation.findMany({
+      where: {
+        userId: dbUser.id,
+        dismissedAt: null, // Don't show dismissed recommendations
+      },
+      orderBy: [
+        { createdAt: 'desc' },
+      ],
+    })
 
-  const recommendations: Recommendation[] = recommendationsData.map(rec => ({
-    id: rec.id,
-    userId: rec.userId,
-    type: rec.type,
-    title: rec.title,
-    description: rec.description,
-    priority: rec.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
-    status: rec.status as 'PENDING' | 'DISMISSED' | 'IN_PROGRESS' | 'IMPLEMENTED',
-    source: rec.source as 'AI' | 'ADVISOR' | 'SYSTEM',
-    createdById: rec.createdById,
-    createdAt: new Date(rec.createdAt),
-    updatedAt: new Date(rec.updatedAt),
-  }))
+    console.log('[INVESTOR DASHBOARD] Fetched recommendations:', recommendationsData.length, 'for user:', dbUser.id)
+
+    recommendations = recommendationsData.map(rec => ({
+      id: rec.id,
+      userId: rec.userId,
+      type: rec.type,
+      title: rec.title,
+      description: rec.description,
+      priority: rec.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+      status: rec.status as 'PENDING' | 'DISMISSED' | 'IN_PROGRESS' | 'IMPLEMENTED',
+      source: rec.source as 'AI' | 'ADVISOR' | 'SYSTEM',
+      createdById: rec.createdById,
+      createdAt: new Date(rec.createdAt),
+      updatedAt: new Date(rec.updatedAt),
+    }))
+  } catch (error) {
+    console.error('[INVESTOR DASHBOARD] Error fetching recommendations:', error)
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
