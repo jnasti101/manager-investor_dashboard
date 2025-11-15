@@ -215,8 +215,31 @@ export default async function InvestorDashboard() {
     }
   })
 
-  // Fetch recommendations (placeholder for now - no data yet)
-  const recommendations: Recommendation[] = []
+  // Fetch recommendations
+  const recommendationsData = await prisma.recommendation.findMany({
+    where: {
+      userId: dbUser.id,
+      dismissedAt: null, // Don't show dismissed recommendations
+    },
+    orderBy: [
+      { priority: 'desc' },
+      { createdAt: 'desc' },
+    ],
+  })
+
+  const recommendations: Recommendation[] = recommendationsData.map(rec => ({
+    id: rec.id,
+    userId: rec.userId,
+    type: rec.type,
+    title: rec.title,
+    description: rec.description,
+    priority: rec.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+    status: rec.status as 'PENDING' | 'DISMISSED' | 'IN_PROGRESS' | 'IMPLEMENTED',
+    source: rec.source as 'AI' | 'ADVISOR' | 'SYSTEM',
+    createdById: rec.createdById,
+    createdAt: new Date(rec.createdAt),
+    updatedAt: new Date(rec.updatedAt),
+  }))
 
   return (
     <div className="min-h-screen bg-gray-50">

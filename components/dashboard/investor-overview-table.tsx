@@ -1,7 +1,12 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { formatCurrency, formatPercentage } from '@/lib/utils'
-import { Users, ChevronRight } from 'lucide-react'
+import { Users, ChevronRight, MessageSquare } from 'lucide-react'
+import { CreateRecommendationModal } from './create-recommendation-modal'
 
 interface InvestorData {
   id: string
@@ -19,6 +24,19 @@ interface InvestorOverviewTableProps {
 }
 
 export function InvestorOverviewTable({ investors }: InvestorOverviewTableProps) {
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedInvestor, setSelectedInvestor] = useState<InvestorData | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const handleCreateRecommendation = (investor: InvestorData) => {
+    setSelectedInvestor(investor)
+    setModalOpen(true)
+  }
+
+  const handleSuccess = () => {
+    setRefreshKey(prev => prev + 1)
+    // Show success message or refresh data
+  }
   return (
     <Card>
       <CardHeader>
@@ -41,11 +59,12 @@ export function InvestorOverviewTable({ investors }: InvestorOverviewTableProps)
                 <th className="text-right py-3 px-4 font-semibold text-sm text-gray-900">Monthly Income</th>
                 <th className="text-right py-3 px-4 font-semibold text-sm text-gray-900">ROI</th>
                 <th className="text-center py-3 px-4 font-semibold text-sm text-gray-900">Status</th>
+                <th className="text-center py-3 px-4 font-semibold text-sm text-gray-900">Actions</th>
               </tr>
             </thead>
             <tbody>
               {investors.map((investor) => (
-                <tr key={investor.id} className="border-b hover:bg-gray-50 cursor-pointer transition-colors">
+                <tr key={investor.id} className="border-b hover:bg-gray-50 transition-colors">
                   <td className="py-3 px-4">
                     <Link href={`/dashboard/manager/investor/${investor.id}`} className="flex items-center justify-between group">
                       <div>
@@ -76,12 +95,32 @@ export function InvestorOverviewTable({ investors }: InvestorOverviewTableProps)
                       {investor.status === 'active' ? 'Active' : 'Review Needed'}
                     </span>
                   </td>
+                  <td className="text-center py-3 px-4">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCreateRecommendation(investor)}
+                      className="gap-2"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Suggest
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </CardContent>
+      {selectedInvestor && (
+        <CreateRecommendationModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          investorId={selectedInvestor.id}
+          investorName={selectedInvestor.name}
+          onSuccess={handleSuccess}
+        />
+      )}
     </Card>
   )
 }

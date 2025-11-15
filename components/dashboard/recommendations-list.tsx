@@ -9,11 +9,13 @@ interface RecommendationsListProps {
 export function RecommendationsList({ recommendations }: RecommendationsListProps) {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high':
+      case 'CRITICAL':
+        return 'text-red-700 bg-red-100'
+      case 'HIGH':
         return 'text-red-600 bg-red-50'
-      case 'medium':
+      case 'MEDIUM':
         return 'text-orange-600 bg-orange-50'
-      case 'low':
+      case 'LOW':
         return 'text-blue-600 bg-blue-50'
       default:
         return 'text-gray-600 bg-gray-50'
@@ -22,12 +24,14 @@ export function RecommendationsList({ recommendations }: RecommendationsListProp
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending':
+      case 'PENDING':
         return <Clock className="h-5 w-5 text-orange-500" />
-      case 'reviewed':
+      case 'IN_PROGRESS':
         return <AlertCircle className="h-5 w-5 text-blue-500" />
-      case 'accepted':
+      case 'IMPLEMENTED':
         return <CheckCircle className="h-5 w-5 text-green-500" />
+      case 'DISMISSED':
+        return <AlertCircle className="h-5 w-5 text-gray-500" />
       default:
         return <Clock className="h-5 w-5 text-gray-500" />
     }

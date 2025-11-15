@@ -52,14 +52,16 @@ export interface Expense {
 
 export interface Recommendation {
   id: string
-  propertyId: string
-  type: 'refinance' | 'sell' | 'reinvest' | 'repair' | 'other'
+  userId: string
+  type: string
   title: string
   description: string
-  priority: 'low' | 'medium' | 'high'
-  createdBy: string // manager ID
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  status: 'PENDING' | 'DISMISSED' | 'IN_PROGRESS' | 'IMPLEMENTED'
+  source: 'AI' | 'ADVISOR' | 'SYSTEM'
+  createdById: string | null
   createdAt: Date
-  status: 'pending' | 'reviewed' | 'accepted' | 'rejected'
+  updatedAt: Date
 }
 
 export interface Portfolio {
