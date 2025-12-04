@@ -9,6 +9,9 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { calculateMonthlyAmount } from '@/lib/cash-flow-calculator'
+import { PropertyTaxService } from '@/lib/services/property-tax-service'
+import { TaxSavingsCard } from '@/components/dashboard/tax-savings-card'
+import { TaxSavingsOpportunity } from '@/types/property-tax'
 
 export default async function ManagerDashboard() {
   const supabase = await createClient()
@@ -101,8 +104,8 @@ export default async function ManagerDashboard() {
         )
 
         const monthlyAmount = income.frequency === 'MONTHLY' ? Number(income.amount) :
-                            income.frequency === 'QUARTERLY' ? Number(income.amount) / 3 :
-                            income.frequency === 'ANNUALLY' ? Number(income.amount) / 12 : 0
+          income.frequency === 'QUARTERLY' ? Number(income.amount) / 3 :
+            income.frequency === 'ANNUALLY' ? Number(income.amount) / 12 : 0
 
         return iSum + (monthlyAmount * monthsOfIncome)
       }, 0)
@@ -148,6 +151,25 @@ export default async function ManagerDashboard() {
   // Placeholder for action items and activities
   const mockActionItems: any[] = []
   const mockActivities: any[] = []
+
+  // Run Tax Analysis
+  const taxOpportunities: TaxSavingsOpportunity[] = []
+
+  // We'll just check the first few properties to avoid performance issues in this MVP loop
+  // In a real app, this would be a background job or cached result
+  for (const investor of investors) {
+    for (const asset of investor.assets) {
+      if (asset.realEstateProperty) {
+        const opportunity = await PropertyTaxService.analyzeProperty(
+          asset.realEstateProperty,
+          asset.name
+        )
+        if (opportunity) {
+          taxOpportunities.push(opportunity)
+        }
+      }
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -195,21 +217,33 @@ export default async function ManagerDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <RecentActivity activities={mockActivities} />
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="font-semibold text-lg mb-4 text-gray-900">Quick Actions</h3>
-            <div className="space-y-2">
-              <button className="w-full text-left px-4 py-3 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition text-gray-900 font-medium">
-                Add New Property
-              </button>
-              <button className="w-full text-left px-4 py-3 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition text-gray-900 font-medium">
-                Create Recommendation
-              </button>
-              <button className="w-full text-left px-4 py-3 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition text-gray-900 font-medium">
-                Generate Report
-              </button>
-              <button className="w-full text-left px-4 py-3 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition text-gray-900 font-medium">
-                Invite New Investor
-              </button>
+          <div className="space-y-6">
+            {/* Tax Opportunities Section */}
+            {taxOpportunities.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg text-gray-900">Tax Insights</h3>
+                {taxOpportunities.map((opportunity, index) => (
+                  <TaxSavingsCard key={index} opportunity={opportunity} />
+                ))}
+              </div>
+            )}
+
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="font-semibold text-lg mb-4 text-gray-900">Quick Actions</h3>
+              <div className="space-y-2">
+                <button className="w-full text-left px-4 py-3 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition text-gray-900 font-medium">
+                  Add New Property
+                </button>
+                <button className="w-full text-left px-4 py-3 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition text-gray-900 font-medium">
+                  Create Recommendation
+                </button>
+                <button className="w-full text-left px-4 py-3 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition text-gray-900 font-medium">
+                  Generate Report
+                </button>
+                <button className="w-full text-left px-4 py-3 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition text-gray-900 font-medium">
+                  Invite New Investor
+                </button>
+              </div>
             </div>
           </div>
         </div>
