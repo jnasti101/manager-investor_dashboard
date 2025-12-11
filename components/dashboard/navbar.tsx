@@ -27,17 +27,17 @@ export function Navbar({ userName, userRole }: NavbarProps) {
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-slate-800 border-b border-slate-700">
+    <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
             <Link href="/dashboard/investor" className="flex items-center gap-3">
-              <div className="h-9 w-9 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Building2 className="h-5 w-5 text-white" />
+              <div className="h-9 w-9 bg-primary rounded-lg flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="font-semibold text-lg text-white">ApexWealth</h1>
-                <p className="text-xs text-slate-400">{userRole} Dashboard</p>
+                <h1 className="font-semibold text-lg text-foreground">ApexWealth</h1>
+                <p className="text-xs text-muted-foreground">{userRole} Dashboard</p>
               </div>
             </Link>
 
@@ -45,8 +45,8 @@ export function Navbar({ userName, userRole }: NavbarProps) {
               <Link
                 href="/dashboard/investor"
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${pathname === '/dashboard/investor'
-                    ? 'bg-slate-700 text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                  ? 'bg-secondary text-secondary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                   }`}
               >
                 <Home className="h-4 w-4" />
@@ -55,8 +55,8 @@ export function Navbar({ userName, userRole }: NavbarProps) {
               <Link
                 href="/dashboard/properties"
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${pathname?.startsWith('/dashboard/properties')
-                    ? 'bg-slate-700 text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                  ? 'bg-secondary text-secondary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                   }`}
               >
                 <Briefcase className="h-4 w-4" />
@@ -67,14 +67,14 @@ export function Navbar({ userName, userRole }: NavbarProps) {
 
           <div className="flex items-center gap-6">
             <div className="text-right hidden sm:block">
-              <p className="font-medium text-white text-sm">{userName}</p>
-              <p className="text-xs text-slate-400">Verified Investor</p>
+              <p className="font-medium text-foreground text-sm">{userName}</p>
+              <p className="text-xs text-muted-foreground">Verified Investor</p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleLogout}
-              className="text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+              className="text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
             >
               <LogOut className="h-4 w-4 mr-2" />
               Logout

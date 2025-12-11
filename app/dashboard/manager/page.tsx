@@ -172,13 +172,13 @@ export default async function ManagerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navbar userName={dbUser.name || 'Manager'} userRole={dbUser.role.toLowerCase()} />
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2 text-gray-900">Manager Dashboard</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold mb-2 text-foreground">Manager Dashboard</h1>
+          <p className="text-muted-foreground">
             Manage your investors and their portfolios
           </p>
         </div>
@@ -221,26 +221,26 @@ export default async function ManagerDashboard() {
             {/* Tax Opportunities Section */}
             {taxOpportunities.length > 0 && (
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg text-gray-900">Tax Insights</h3>
+                <h3 className="font-semibold text-lg text-foreground">Tax Insights</h3>
                 {taxOpportunities.map((opportunity, index) => (
                   <TaxSavingsCard key={index} opportunity={opportunity} />
                 ))}
               </div>
             )}
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold text-lg mb-4 text-gray-900">Quick Actions</h3>
+            <div className="bg-card border border-border rounded-lg shadow-sm p-6">
+              <h3 className="font-semibold text-lg mb-4 text-foreground">Quick Actions</h3>
               <div className="space-y-2">
-                <button className="w-full text-left px-4 py-3 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition text-gray-900 font-medium">
+                <button className="w-full text-left px-4 py-3 bg-secondary hover:bg-secondary/80 rounded-lg transition text-foreground font-medium">
                   Add New Property
                 </button>
-                <button className="w-full text-left px-4 py-3 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition text-gray-900 font-medium">
+                <button className="w-full text-left px-4 py-3 bg-secondary hover:bg-secondary/80 rounded-lg transition text-foreground font-medium">
                   Create Recommendation
                 </button>
-                <button className="w-full text-left px-4 py-3 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition text-gray-900 font-medium">
+                <button className="w-full text-left px-4 py-3 bg-secondary hover:bg-secondary/80 rounded-lg transition text-foreground font-medium">
                   Generate Report
                 </button>
-                <button className="w-full text-left px-4 py-3 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition text-gray-900 font-medium">
+                <button className="w-full text-left px-4 py-3 bg-secondary hover:bg-secondary/80 rounded-lg transition text-foreground font-medium">
                   Invite New Investor
                 </button>
               </div>

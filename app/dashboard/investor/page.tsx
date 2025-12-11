@@ -248,13 +248,13 @@ export default async function InvestorDashboard() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <Navbar userName={dbUser.name || 'User'} userRole={dbUser.role.toLowerCase()} />
 
       <main className="container mx-auto px-6 py-8">
         <div className="mb-8 mt-4">
-          <h1 className="text-2xl font-semibold mb-2 text-white">Portfolio Overview</h1>
-          <p className="text-slate-400">
+          <h1 className="text-2xl font-semibold mb-2 text-foreground">Portfolio Overview</h1>
+          <p className="text-muted-foreground">
             Track your real estate investments and performance
           </p>
         </div>

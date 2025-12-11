@@ -38,11 +38,11 @@ export function InvestorOverviewTable({ investors }: InvestorOverviewTableProps)
     // Show success message or refresh data
   }
   return (
-    <Card>
+    <Card className="glass-panel">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Investors Overview</CardTitle>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+          <CardTitle className="text-foreground">Investors Overview</CardTitle>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Users className="h-4 w-4" />
             <span>{investors.length} Total Investors</span>
           </div>
@@ -52,45 +52,44 @@ export function InvestorOverviewTable({ investors }: InvestorOverviewTableProps)
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b">
-                <th className="text-left py-3 px-4 font-semibold text-sm text-gray-900">Investor</th>
-                <th className="text-right py-3 px-4 font-semibold text-sm text-gray-900">Properties</th>
-                <th className="text-right py-3 px-4 font-semibold text-sm text-gray-900">Portfolio Value</th>
-                <th className="text-right py-3 px-4 font-semibold text-sm text-gray-900">Monthly Income</th>
-                <th className="text-right py-3 px-4 font-semibold text-sm text-gray-900">ROI</th>
-                <th className="text-center py-3 px-4 font-semibold text-sm text-gray-900">Status</th>
-                <th className="text-center py-3 px-4 font-semibold text-sm text-gray-900">Actions</th>
+              <tr className="border-b border-border">
+                <th className="text-left py-3 px-4 font-semibold text-sm text-foreground">Investor</th>
+                <th className="text-right py-3 px-4 font-semibold text-sm text-foreground">Properties</th>
+                <th className="text-right py-3 px-4 font-semibold text-sm text-foreground">Portfolio Value</th>
+                <th className="text-right py-3 px-4 font-semibold text-sm text-foreground">Monthly Income</th>
+                <th className="text-right py-3 px-4 font-semibold text-sm text-foreground">ROI</th>
+                <th className="text-center py-3 px-4 font-semibold text-sm text-foreground">Status</th>
+                <th className="text-center py-3 px-4 font-semibold text-sm text-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {investors.map((investor) => (
-                <tr key={investor.id} className="border-b hover:bg-gray-50 transition-colors">
+                <tr key={investor.id} className="border-b border-border hover:bg-muted/50 transition-colors">
                   <td className="py-3 px-4">
                     <Link href={`/dashboard/manager/investor/${investor.id}`} className="flex items-center justify-between group">
                       <div>
-                        <p className="font-medium text-gray-900 group-hover:text-indigo-600">{investor.name}</p>
-                        <p className="text-sm text-gray-600">{investor.email}</p>
+                        <p className="font-medium text-foreground group-hover:text-primary transition-colors">{investor.name}</p>
+                        <p className="text-sm text-muted-foreground">{investor.email}</p>
                       </div>
-                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </Link>
                   </td>
-                  <td className="text-right py-3 px-4 text-gray-900 font-medium">{investor.propertiesCount}</td>
-                  <td className="text-right py-3 px-4 text-gray-900 font-medium">
+                  <td className="text-right py-3 px-4 text-foreground font-medium">{investor.propertiesCount}</td>
+                  <td className="text-right py-3 px-4 text-foreground font-medium">
                     {formatCurrency(investor.totalValue)}
                   </td>
-                  <td className="text-right py-3 px-4 text-green-600 font-medium">
+                  <td className="text-right py-3 px-4 text-emerald-500 font-medium">
                     {formatCurrency(investor.monthlyIncome)}
                   </td>
-                  <td className="text-right py-3 px-4 text-gray-900 font-medium">
+                  <td className="text-right py-3 px-4 text-foreground font-medium">
                     {formatPercentage(investor.totalROI)}
                   </td>
                   <td className="text-center py-3 px-4">
                     <span
-                      className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                        investor.status === 'active'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-orange-100 text-orange-700'
-                      }`}
+                      className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${investor.status === 'active'
+                          ? 'bg-emerald-500/10 text-emerald-500'
+                          : 'bg-orange-500/10 text-orange-500'
+                        }`}
                     >
                       {investor.status === 'active' ? 'Active' : 'Review Needed'}
                     </span>

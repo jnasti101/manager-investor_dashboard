@@ -1,29 +1,61 @@
 @import "tailwindcss";
 
 @theme {
-  --font-display: 'Inter', 'sans-serif';
+  --font-display: 'Outfit', 'Inter', 'sans-serif';
   --font-sans: 'Inter', 'sans-serif';
   --font-mono: 'JetBrains Mono', 'monospace';
 }
 
 :root {
-  --background: #0f172a; /* slate-900 */
-  --foreground: #f1f5f9; /* slate-100 */
+  /* Deep Dark Theme Base */
+  --background: #020617;
+  /* slate-950 */
+  --foreground: #f8fafc;
+  /* slate-50 */
 
-  --card-bg: #1e293b; /* slate-800 */
-  --card-border: #334155; /* slate-700 */
+  /* Glass Cards */
+  --card: rgba(30, 41, 59, 0.7);
+  /* slate-800 with opacity */
+  --card-foreground: #f1f5f9;
+  /* slate-100 */
+  --card-border: rgba(148, 163, 184, 0.1);
+  /* slate-400 with low opacity */
 
-  --primary: #3b82f6; /* blue-500 */
+  /* Primary Action */
+  --primary: #3b82f6;
+  /* blue-500 */
   --primary-foreground: #ffffff;
 
-  --muted: #64748b; /* slate-500 */
-  --muted-foreground: #94a3b8; /* slate-400 */
+  /* Secondary / Muted */
+  --secondary: #1e293b;
+  /* slate-800 */
+  --secondary-foreground: #f8fafc;
+  /* slate-50 */
+  --muted: #0f172a;
+  /* slate-900 */
+  --muted-foreground: #94a3b8;
+  /* slate-400 */
+
+  /* Accents */
+  --accent: rgba(59, 130, 246, 0.1);
+  /* blue-500 with low opacity */
+  --accent-foreground: #60a5fa;
+  /* blue-400 */
+
+  --border: rgba(148, 163, 184, 0.1);
+  --input: rgba(148, 163, 184, 0.1);
+  --ring: rgba(59, 130, 246, 0.5);
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: var(--font-sans);
+  min-height: 100vh;
+  /* Subtle gradient background */
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15), transparent 40%),
+    radial-gradient(circle at 80% 10%, rgba(16, 185, 129, 0.05), transparent 30%);
 }
 
 @layer utilities {
@@ -32,14 +64,18 @@ body {
   }
 
   .glass-panel {
-    @apply bg-slate-800 border border-slate-700 shadow-lg;
+    @apply bg-slate-900/60 backdrop-blur-md border border-slate-800/50 shadow-xl;
   }
 
   .glass-card {
-    @apply bg-slate-800 border border-slate-700 shadow-md hover:border-slate-600 transition-colors duration-200;
+    @apply bg-slate-800/40 backdrop-blur-md border border-white/10 shadow-lg hover:border-white/20 transition-all duration-300 hover:shadow-blue-500/5 hover:-translate-y-1;
   }
 
   .glass-button {
-    @apply bg-blue-600 hover:bg-blue-500 text-white transition-colors duration-200;
+    @apply bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  .glass-input {
+    @apply bg-slate-900/50 border border-slate-700/50 text-slate-100 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all duration-200;
   }
 }

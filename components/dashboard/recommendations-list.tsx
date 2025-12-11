@@ -10,53 +10,53 @@ export function RecommendationsList({ recommendations }: RecommendationsListProp
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'CRITICAL':
-        return 'text-red-700 bg-red-100'
+        return 'text-red-400 bg-red-500/10'
       case 'HIGH':
-        return 'text-red-600 bg-red-50'
+        return 'text-red-400 bg-red-500/10'
       case 'MEDIUM':
-        return 'text-orange-600 bg-orange-50'
+        return 'text-orange-400 bg-orange-500/10'
       case 'LOW':
-        return 'text-blue-600 bg-blue-50'
+        return 'text-blue-400 bg-blue-500/10'
       default:
-        return 'text-gray-600 bg-gray-50'
+        return 'text-muted-foreground bg-secondary'
     }
   }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'PENDING':
-        return <Clock className="h-5 w-5 text-orange-500" />
+        return <Clock className="h-5 w-5 text-orange-400" />
       case 'IN_PROGRESS':
-        return <AlertCircle className="h-5 w-5 text-blue-500" />
+        return <AlertCircle className="h-5 w-5 text-blue-400" />
       case 'IMPLEMENTED':
-        return <CheckCircle className="h-5 w-5 text-green-500" />
+        return <CheckCircle className="h-5 w-5 text-emerald-400" />
       case 'DISMISSED':
-        return <AlertCircle className="h-5 w-5 text-gray-500" />
+        return <AlertCircle className="h-5 w-5 text-muted-foreground" />
       default:
-        return <Clock className="h-5 w-5 text-gray-500" />
+        return <Clock className="h-5 w-5 text-muted-foreground" />
     }
   }
 
   return (
-    <Card>
+    <Card className="glass-panel">
       <CardHeader>
-        <CardTitle>Manager Recommendations</CardTitle>
+        <CardTitle className="text-foreground">Manager Recommendations</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {recommendations.length === 0 ? (
-            <p className="text-gray-600 text-center py-8">No recommendations yet</p>
+            <p className="text-muted-foreground text-center py-8">No recommendations yet</p>
           ) : (
             recommendations.map((rec) => (
               <div
                 key={rec.id}
-                className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                className="border border-border bg-card/50 rounded-lg p-4 hover:border-primary/50 transition-colors"
               >
                 <div className="flex items-start gap-3">
                   {getStatusIcon(rec.status)}
                   <div className="flex-1">
                     <div className="flex items-start justify-between">
-                      <h3 className="font-semibold text-gray-900">{rec.title}</h3>
+                      <h3 className="font-semibold text-foreground">{rec.title}</h3>
                       <span
                         className={`text-xs px-2 py-1 rounded-full font-medium ${getPriorityColor(
                           rec.priority
@@ -65,8 +65,8 @@ export function RecommendationsList({ recommendations }: RecommendationsListProp
                         {rec.priority}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-700 mt-1">{rec.description}</p>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-600">
+                    <p className="text-sm text-muted-foreground mt-1">{rec.description}</p>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                       <span>Type: {rec.type}</span>
                       <span>Status: {rec.status}</span>
                       <span>{rec.createdAt.toLocaleDateString()}</span>
