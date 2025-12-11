@@ -27,26 +27,26 @@ export function Navbar({ userName, userRole }: NavbarProps) {
   }
 
   return (
-    <nav className="sticky top-4 z-50 mx-4 mt-4 rounded-2xl glass-panel border-white/10">
+    <nav className="sticky top-0 z-50 bg-slate-800 border-b border-slate-700">
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
-            <Link href="/dashboard/investor" className="flex items-center gap-3 group">
-              <div className="h-10 w-10 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition-all duration-300">
-                <Building2 className="h-6 w-6 text-white" />
+            <Link href="/dashboard/investor" className="flex items-center gap-3">
+              <div className="h-9 w-9 bg-blue-600 rounded-lg flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="font-display font-bold text-xl text-white tracking-tight">Apex<span className="text-emerald-400">Wealth</span></h1>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">{userRole} Dashboard</p>
+                <h1 className="font-semibold text-lg text-white">ApexWealth</h1>
+                <p className="text-xs text-slate-400">{userRole} Dashboard</p>
               </div>
             </Link>
 
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-1">
               <Link
                 href="/dashboard/investor"
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${pathname === '/dashboard/investor'
-                    ? 'bg-white/10 text-white shadow-inner border border-white/5'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${pathname === '/dashboard/investor'
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                   }`}
               >
                 <Home className="h-4 w-4" />
@@ -54,9 +54,9 @@ export function Navbar({ userName, userRole }: NavbarProps) {
               </Link>
               <Link
                 href="/dashboard/properties"
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${pathname?.startsWith('/dashboard/properties')
-                    ? 'bg-white/10 text-white shadow-inner border border-white/5'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${pathname?.startsWith('/dashboard/properties')
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                   }`}
               >
                 <Briefcase className="h-4 w-4" />
@@ -68,13 +68,13 @@ export function Navbar({ userName, userRole }: NavbarProps) {
           <div className="flex items-center gap-6">
             <div className="text-right hidden sm:block">
               <p className="font-medium text-white text-sm">{userName}</p>
-              <p className="text-xs text-emerald-400 font-mono">Verified Investor</p>
+              <p className="text-xs text-slate-400">Verified Investor</p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleLogout}
-              className="text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              className="text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
             >
               <LogOut className="h-4 w-4 mr-2" />
               Logout

@@ -253,7 +253,7 @@ export default async function InvestorDashboard() {
 
       <main className="container mx-auto px-6 py-8">
         <div className="mb-8 mt-4">
-          <h1 className="text-3xl font-display font-bold mb-2 text-white">Portfolio Overview</h1>
+          <h1 className="text-2xl font-semibold mb-2 text-white">Portfolio Overview</h1>
           <p className="text-slate-400">
             Track your real estate investments and performance
           </p>

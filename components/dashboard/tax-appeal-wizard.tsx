@@ -59,7 +59,7 @@ export function TaxAppealWizard({ propertyId, opportunity, onComplete }: TaxAppe
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                <Button className="w-full bg-blue-600 hover:bg-blue-500 text-white">
                     Start Appeal Process
                 </Button>
             </DialogTrigger>
@@ -74,25 +74,26 @@ export function TaxAppealWizard({ propertyId, opportunity, onComplete }: TaxAppe
                 <div className="py-4">
                     {step === 1 && (
                         <div className="space-y-4">
-                            <p>We've analyzed your property tax assessment against local comparables.</p>
+                            <p className="text-slate-300">We've analyzed your property tax assessment against local comparables.</p>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 bg-gray-50 rounded border">
-                                    <p className="text-sm text-gray-500">Current Annual Tax</p>
-                                    <p className="text-xl font-bold">{formatCurrency(opportunity.currentAnnualTax)}</p>
+                                <div className="p-4 bg-slate-700 rounded-lg border border-slate-600">
+                                    <p className="text-sm text-slate-400">Current Annual Tax</p>
+                                    <p className="text-xl font-semibold text-white">{formatCurrency(opportunity.currentAnnualTax)}</p>
                                 </div>
-                                <div className="p-4 bg-green-50 rounded border border-green-100">
-                                    <p className="text-sm text-green-700">Detailed Fair Tax</p>
-                                    <p className="text-xl font-bold text-green-700">{formatCurrency(opportunity.averageCompTax)}</p>
+                                <div className="p-4 bg-slate-700 rounded-lg border border-green-600/50">
+                                    <p className="text-sm text-green-400">Estimated Fair Tax</p>
+                                    <p className="text-xl font-semibold text-green-400">{formatCurrency(opportunity.averageCompTax)}</p>
                                 </div>
                             </div>
                             <div>
-                                <label className="text-sm font-medium">Target Assessed Value</label>
+                                <label className="text-sm font-medium text-slate-300">Target Assessed Value</label>
                                 <Input
                                     type="number"
                                     value={Math.round(targetValue)}
                                     onChange={(e) => setTargetValue(Number(e.target.value))}
+                                    className="bg-slate-700 border-slate-600 text-white mt-1"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-slate-500 mt-1">
                                     This is the value we will argue for in the appeal.
                                 </p>
                             </div>
@@ -101,9 +102,9 @@ export function TaxAppealWizard({ propertyId, opportunity, onComplete }: TaxAppe
 
                     {step === 2 && (
                         <div className="space-y-4">
-                            <p className="text-sm">Select the comparables to include in your evidence package:</p>
+                            <p className="text-sm text-slate-300">Select the comparables to include in your evidence package:</p>
                             {opportunity.comparables.map((comp) => (
-                                <div key={comp.id} className="flex items-start space-x-3 p-3 border rounded hover:bg-gray-50">
+                                <div key={comp.id} className="flex items-start space-x-3 p-3 border border-slate-600 rounded-lg bg-slate-700/50 hover:bg-slate-700">
                                     <input
                                         type="checkbox"
                                         className="mt-1"
@@ -114,8 +115,8 @@ export function TaxAppealWizard({ propertyId, opportunity, onComplete }: TaxAppe
                                         }}
                                     />
                                     <div>
-                                        <p className="font-medium text-sm">{comp.address}</p>
-                                        <p className="text-xs text-gray-500">
+                                        <p className="font-medium text-sm text-white">{comp.address}</p>
+                                        <p className="text-xs text-slate-400">
                                             {comp.squareFeet} sqft • Built {comp.yearBuilt} • {formatCurrency(comp.annualPropertyTax)}/yr tax
                                         </p>
                                     </div>
@@ -126,16 +127,16 @@ export function TaxAppealWizard({ propertyId, opportunity, onComplete }: TaxAppe
 
                     {step === 3 && (
                         <div className="space-y-4">
-                            <div className="bg-green-50 p-4 rounded-lg flex items-start gap-3">
-                                <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                            <div className="bg-green-900/30 border border-green-700 p-4 rounded-lg flex items-start gap-3">
+                                <Check className="h-5 w-5 text-green-500 mt-0.5" />
                                 <div>
-                                    <h4 className="font-medium text-green-900">Ready to Submit</h4>
-                                    <p className="text-sm text-green-800 mt-1">
+                                    <h4 className="font-medium text-green-400">Ready to Submit</h4>
+                                    <p className="text-sm text-green-300 mt-1">
                                         We will generate the appeal forms and attach the {selectedComps.length} selected comparables as evidence.
                                     </p>
                                 </div>
                             </div>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-slate-400">
                                 By clicking submit, you authorize us to generate a draft appeal for your review.
                                 No official filing will happen until your final approval.
                             </p>

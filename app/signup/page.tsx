@@ -66,10 +66,12 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-md glass-card border-slate-800">
+      <Card className="w-full max-w-md glass-card">
         <CardHeader className="space-y-1 flex flex-col items-center">
-          <Building2 className="h-12 w-12 text-emerald-400 mb-2" />
-          <CardTitle className="text-2xl font-bold font-display text-white">Create Account</CardTitle>
+          <div className="h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center mb-2">
+            <Building2 className="h-7 w-7 text-white" />
+          </div>
+          <CardTitle className="text-2xl font-semibold text-white">Create Account</CardTitle>
           <CardDescription className="text-slate-400">
             Get started with your wealth management platform
           </CardDescription>
@@ -77,12 +79,12 @@ export default function SignupPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="rounded-md bg-red-900/50 border border-red-800 p-4">
-                <p className="text-sm text-red-200">{error}</p>
+              <div className="rounded-md bg-red-900/30 border border-red-800 p-3">
+                <p className="text-sm text-red-300">{error}</p>
               </div>
             )}
             <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium text-slate-200">
+              <label htmlFor="name" className="text-sm font-medium text-slate-300">
                 Full Name
               </label>
               <Input
@@ -93,11 +95,11 @@ export default function SignupPage() {
                 onChange={(e) => setName(e.target.value)}
                 required
                 minLength={2}
-                className="bg-slate-950/50 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-slate-200">
+              <label htmlFor="email" className="text-sm font-medium text-slate-300">
                 Email
               </label>
               <Input
@@ -107,11 +109,11 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-slate-950/50 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-slate-200">
+              <label htmlFor="password" className="text-sm font-medium text-slate-300">
                 Password
               </label>
               <Input
@@ -122,7 +124,7 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
-                className="bg-slate-950/50 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
               />
               <p className="text-xs text-slate-500">Must be at least 8 characters</p>
             </div>
@@ -132,7 +134,7 @@ export default function SignupPage() {
           </form>
           <div className="mt-4 text-center text-sm">
             <span className="text-slate-400">Already have an account? </span>
-            <Link href="/login" className="text-emerald-400 hover:text-emerald-300 hover:underline font-medium transition-colors">
+            <Link href="/login" className="text-blue-400 hover:text-blue-300 hover:underline font-medium transition-colors">
               Log in
             </Link>
           </div>
