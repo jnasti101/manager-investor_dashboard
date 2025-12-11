@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Building2, LogOut, Home, Briefcase } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -65,7 +66,11 @@ export function Navbar({ userName, userRole }: NavbarProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
+            <div className="hidden md:block">
+              <ThemeToggle />
+            </div>
+
             <div className="text-right hidden sm:block">
               <p className="font-medium text-foreground text-sm">{userName}</p>
               <p className="text-xs text-muted-foreground">Verified Investor</p>

@@ -1,5 +1,4 @@
 import { Building2, DollarSign, TrendingUp, Home } from 'lucide-react'
-import { Navbar } from '@/components/dashboard/navbar'
 import { StatCard } from '@/components/dashboard/stat-card'
 import { PropertyList } from '@/components/dashboard/property-list'
 import { RecommendationsList } from '@/components/dashboard/recommendations-list'
@@ -249,8 +248,6 @@ export default async function InvestorDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userName={dbUser.name || 'User'} userRole={dbUser.role.toLowerCase()} />
-
       <main className="container mx-auto px-6 py-8">
         <div className="mb-8 mt-4">
           <h1 className="text-2xl font-semibold mb-2 text-foreground">Portfolio Overview</h1>

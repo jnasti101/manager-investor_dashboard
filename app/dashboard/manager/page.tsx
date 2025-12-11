@@ -1,5 +1,4 @@
 import { Users, Building2, DollarSign, TrendingUp } from 'lucide-react'
-import { Navbar } from '@/components/dashboard/navbar'
 import { StatCard } from '@/components/dashboard/stat-card'
 import { InvestorOverviewTable } from '@/components/dashboard/investor-overview-table'
 import { ActionItems } from '@/components/dashboard/action-items'
@@ -173,8 +172,6 @@ export default async function ManagerDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userName={dbUser.name || 'Manager'} userRole={dbUser.role.toLowerCase()} />
-
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2 text-foreground">Manager Dashboard</h1>
