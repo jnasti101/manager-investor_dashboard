@@ -9,7 +9,7 @@ export interface ComparableProperty {
   bedrooms: number
   bathrooms: number
   lastSalePrice: number
-  lastSaleDate: Date
+  lastSaleDate: string
   assessedValue: number
   annualPropertyTax: number
   distanceMiles: number

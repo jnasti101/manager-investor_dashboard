@@ -1,5 +1,6 @@
 import { ComparableProperty, TaxSavingsOpportunity } from '@/types/property-tax'
 import { RealEstateProperty, PropertyExpense, ExpenseCategory } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 
 // Mock function to simulate fetching comps from an external API
 async function fetchComps(property: RealEstateProperty): Promise<ComparableProperty[]> {
@@ -29,7 +30,7 @@ async function fetchComps(property: RealEstateProperty): Promise<ComparablePrope
             bedrooms: property.bedrooms || 3,
             bathrooms: Number(property.bathrooms) || 2,
             lastSalePrice: baseValue * valueVariance,
-            lastSaleDate: new Date(Date.now() - Math.random() * 31536000000), // Last year
+            lastSaleDate: new Date(Date.now() - Math.random() * 31536000000).toISOString(), // Last year
             assessedValue: baseValue * valueVariance * 0.8, // Assessed value often lower than market
             annualPropertyTax: baseTax * taxVariance,
             distanceMiles: 0.1 + Math.random() * 0.5
@@ -98,5 +99,33 @@ export const PropertyTaxService = {
         }
 
         return null
+    },
+
+    async createAppeal(
+        propertyId: string,
+        currentAssessedValue: number,
+        targetAssessedValue: number,
+        taxYear: number
+    ) {
+        // Create a new appeal in draft status
+        const appeal = await prisma.taxAppeal.create({
+            data: {
+                propertyId,
+                currentAssessedValue,
+                targetAssessedValue,
+                taxYear,
+                status: 'DRAFT'
+            }
+        })
+        return appeal
+    },
+
+    async getActiveAppeal(propertyId: string) {
+        // Find the most recent active appeal
+        const appeal = await prisma.taxAppeal.findFirst({
+            where: { propertyId },
+            orderBy: { createdAt: 'desc' }
+        })
+        return appeal
     }
 }

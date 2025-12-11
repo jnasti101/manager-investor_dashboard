@@ -147,8 +147,37 @@ model RealEstateProperty {
   documents       PropertyDocument[]
   expenses        PropertyExpense[]
   mortgages       PropertyMortgage[]
+  taxAppeals      TaxAppeal[]
 
   @@index([assetId])
+}
+
+model TaxAppeal {
+  id              String           @id @default(uuid())
+  propertyId      String
+  status          AppealStatus     @default(DRAFT)
+  currentAssessedValue Decimal     @db.Decimal(15, 2)
+  targetAssessedValue  Decimal     @db.Decimal(15, 2)
+  taxYear         Int
+  filingDate      DateTime?
+  description     String?
+  documents       String[]         // Array of document URLs
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  property        RealEstateProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([status])
+}
+
+enum AppealStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  DENIED
+  APPEALED_FURTHER
 }
 
 enum PropertyType {

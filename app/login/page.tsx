@@ -62,24 +62,24 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <Card className="w-full max-w-md glass-card border-slate-800">
         <CardHeader className="space-y-1 flex flex-col items-center">
-          <Building2 className="h-12 w-12 text-indigo-600 mb-2" />
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>
+          <Building2 className="h-12 w-12 text-emerald-400 mb-2" />
+          <CardTitle className="text-2xl font-bold font-display text-white">Welcome Back</CardTitle>
+          <CardDescription className="text-slate-400">
             Enter your credentials to access your dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="rounded-md bg-red-50 p-4">
-                <p className="text-sm text-red-800">{error}</p>
+              <div className="rounded-md bg-red-900/50 border border-red-800 p-4">
+                <p className="text-sm text-red-200">{error}</p>
               </div>
             )}
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-gray-900">
+              <label htmlFor="email" className="text-sm font-medium text-slate-200">
                 Email
               </label>
               <Input
@@ -89,10 +89,11 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="bg-slate-950/50 border-slate-700 text-white placeholder:text-slate-500"
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-gray-900">
+              <label htmlFor="password" className="text-sm font-medium text-slate-200">
                 Password
               </label>
               <Input
@@ -103,21 +104,22 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
+                className="bg-slate-950/50 border-slate-700 text-white placeholder:text-slate-500"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full glass-button" disabled={loading}>
               {loading ? 'Logging in...' : 'Log In'}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
-            <span className="text-gray-600">Don&apos;t have an account? </span>
-            <Link href="/signup" className="text-indigo-600 hover:underline font-medium">
+            <span className="text-slate-400">Don&apos;t have an account? </span>
+            <Link href="/signup" className="text-emerald-400 hover:text-emerald-300 hover:underline font-medium transition-colors">
               Sign up
             </Link>
           </div>
-          <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm text-gray-700">
-            <p className="font-semibold mb-1 text-gray-900">Create an account to get started!</p>
-            <p>Click &quot;Sign up&quot; above to register.</p>
+          <div className="mt-4 p-3 bg-slate-900/50 border border-slate-800 rounded-md text-sm text-slate-300">
+            <p className="font-semibold mb-1 text-slate-100">Create an account to get started!</p>
+            <p className="text-slate-400">Click &quot;Sign up&quot; above to register.</p>
           </div>
         </CardContent>
       </Card>

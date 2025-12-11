@@ -11,6 +11,9 @@ import { MortgageForm } from '@/components/properties/mortgage-form'
 import { CashFlowChart } from '@/components/charts/cash-flow-chart'
 import { generateCashFlowData } from '@/lib/cash-flow-calculator'
 import { createClient } from '@/lib/supabase/server'
+import { PropertyTaxService } from '@/lib/services/property-tax-service'
+import { TaxAppealSection } from '@/components/dashboard/tax-appeal-section'
+import { PropertyExpense } from '@prisma/client'
 
 export default async function PropertyDetailPage({
   params,
@@ -124,6 +127,12 @@ export default async function PropertyDetailPage({
     6 // Last 6 months
   )
 
+  const today = new Date()
+  const taxOpportunity = await PropertyTaxService.analyzeProperty(
+    { ...reProperty, expenses: reProperty.expenses as PropertyExpense[] },
+    property.name
+  )
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -144,6 +153,11 @@ export default async function PropertyDetailPage({
               </Button>
             </Link>
           </div>
+        </div>
+
+        {/* Tax Appeal Section */}
+        <div className="mb-8">
+          <TaxAppealSection propertyId={property.id} opportunity={taxOpportunity} />
         </div>
 
         {/* Images */}

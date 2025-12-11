@@ -122,8 +122,8 @@ export default async function InvestorDashboard() {
 
       // Convert to monthly and multiply by months
       const monthlyAmount = income.frequency === 'MONTHLY' ? Number(income.amount) :
-                          income.frequency === 'QUARTERLY' ? Number(income.amount) / 3 :
-                          income.frequency === 'ANNUALLY' ? Number(income.amount) / 12 : 0
+        income.frequency === 'QUARTERLY' ? Number(income.amount) / 3 :
+          income.frequency === 'ANNUALLY' ? Number(income.amount) / 12 : 0
 
       return iSum + (monthlyAmount * monthsOfIncome)
     }, 0)
@@ -248,13 +248,13 @@ export default async function InvestorDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <Navbar userName={dbUser.name || 'User'} userRole={dbUser.role.toLowerCase()} />
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2 text-gray-900">Portfolio Overview</h1>
-          <p className="text-gray-600">
+      <main className="container mx-auto px-6 py-8">
+        <div className="mb-8 mt-4">
+          <h1 className="text-3xl font-display font-bold mb-2 text-white">Portfolio Overview</h1>
+          <p className="text-slate-400">
             Track your real estate investments and performance
           </p>
         </div>
